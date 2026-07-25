@@ -1,5 +1,7 @@
 package io.github.lucasfcz.coralink.sources;
 
+import io.github.lucasfcz.coralink.dto.DetailedContent;
+import io.github.lucasfcz.coralink.dto.ExtrationResult;
 import io.github.lucasfcz.coralink.dto.NewsSummary;
 import io.github.lucasfcz.coralink.enums.SourceName;
 import io.github.lucasfcz.coralink.exceptions.CollectException;
@@ -33,6 +35,41 @@ public class CinUfpeCollector implements Collector {
         } catch (IOException e) {
             throw new CollectException("Failed to collect data from CIN-UFPE", e);
         }
+    }
+
+    @Override
+    public DetailedContent detailedCollect(String newsUrl) {
+        try {
+            Document doc = Jsoup.connect(newsUrl).get();
+            Element contentContainer = doc.selectFirst(".colibri-post-content");
+
+            String fullContent = contentContainer != null
+                    ? contentContainer.select("p").text()
+                    : "";
+
+            String imageUrl = extractImageUrl(doc, contentContainer);
+
+            return new DetailedContent(fullContent, imageUrl);
+
+        } catch (IOException e) {
+            throw new CollectException("Failed to fetch detail from CIN-UFPE: " + newsUrl, e);
+        }
+    }
+
+    private String extractImageUrl(Document doc, Element contentContainer) {
+        Element ogImage = doc.selectFirst("meta[property=og:image]");
+        if (ogImage != null) {
+            return ogImage.attr("content");
+        }
+
+        if (contentContainer != null) {
+            Element firstImg = contentContainer.selectFirst("img");
+            if (firstImg != null) {
+                return firstImg.attr("src");
+            }
+        }
+
+        return null;
     }
 
     private NewsSummary extractSummary(Element article) {

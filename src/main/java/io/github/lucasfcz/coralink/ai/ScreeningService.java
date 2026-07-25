@@ -1,18 +1,26 @@
 package io.github.lucasfcz.coralink.ai;
 
-import io.github.lucasfcz.coralink.dto.NewsSummary;
-import io.github.lucasfcz.coralink.dto.ScreeningResult;
+import io.github.lucasfcz.coralink.dto.ScreeningBatchResult;
 import io.github.lucasfcz.coralink.model.RawOpportunity;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+
+// this class is responsible for AI first call to know if the opportunity is relevant for universitaries/students
+// and what is your probably type, for least the AI sends her justify for results
 @Service
 @RequiredArgsConstructor
 public class ScreeningService {
 
     private final GroqClient groqClient;
 
-    private final String systemPrompt = "Você é um classificador especializado de oportunidades de tecnologia para estudantes de Recife e Região Metropolitana.\n" +
+    // prompt for first screening of opportunities, to classify them as relevant or not and to determine their probably type
+    private static final String systemPrompt = "Você é um classificador especializado de oportunidades de tecnologia para estudantes de Recife e Região Metropolitana.\n" +
             "\n" +
             "Sua função é analisar um conteúdo e decidir se ele representa uma oportunidade relevante para estudantes de tecnologia.\n" +
             "\n" +
@@ -49,28 +57,6 @@ public class ScreeningService {
             "- inovação\n" +
             "- empreendedorismo em tecnologia\n" +
             "\n" +
-            "## Classificação\n" +
-            "\n" +
-            "Sempre classifique a oportunidade em exatamente um dos seguintes tipos:\n" +
-            "\n" +
-            "- HACKATHON\n" +
-            "- COMPETITION\n" +
-            "- EDITAL\n" +
-            "- COURSE\n" +
-            "- WORKSHOP\n" +
-            "- LECTURE\n" +
-            "- BOOTCAMP\n" +
-            "- CERTIFICATION\n" +
-            "- INTERNSHIP_PROGRAM\n" +
-            "- JOB_OPENING\n" +
-            "- TRAINEE_PROGRAM\n" +
-            "- SCHOLARSHIP\n" +
-            "- MEETUP\n" +
-            "- NETWORKING\n" +
-            "- OPEN_SOURCE\n" +
-            "- EVENT\n" +
-            "- OTHER\n" +
-            "\n" +
             "Escolha o tipo mais específico possível.\n" +
             "\n" +
             "Exemplos:\n" +
@@ -94,6 +80,9 @@ public class ScreeningService {
             "\n" +
             "Classifique como não relevante quando o conteúdo tratar apenas de:\n" +
             "\n" +
+            "- assuntos que não são considerados oportunidades para o universitario em geral\n" +
+            "- assuntos que nao podem ser considerados oportunidades para universitarios, exemplo: Henrique Foncerca vence hackthoon..., essa noticia não pode ser considerada uma oportunidade pois não é algo que o universita pode se beneficiar diretamente.\n" +
+            "- noticias com datas passadas\n" +
             "- política\n" +
             "- entretenimento\n" +
             "- esportes\n" +
@@ -101,68 +90,42 @@ public class ScreeningService {
             "- notícias gerais\n" +
             "- assuntos sem relação com tecnologia, educação ou carreira.\n" +
             "\n" +
-            "Nunca invente informações. Baseie toda a classificação apenas no conteúdo fornecido." +
-            "Enums para utlizados no sistema: " +
-            "Enum -> ThematicArea: \n" +
-            "    BACKEND,\n" +
-            "    FRONTEND,\n" +
-            "    DATA_SCIENCE,\n" +
-            "    ARTIFICIAL_INTELLIGENCE,\n" +
-            "    CLOUD_INFRA,\n" +
-            "    CYBERSECURITY,\n" +
-            "    UX_UI,\n" +
-            "    MOBILE,\n" +
-            "    CAREER_EMPLOYABILITY,\n" +
-            "    ENTREPRENEURSHIP,\n" +
-            "    GENERAL_TECH" +
-            "Enum -> OpportunityType: \n" +
-            "    EVENT,\n" +
-            "    HACKATHON,\n" +
-            "    EDITAL,\n" +
-            "    BOOTCAMP,\n" +
-            "    CERTIFICATION,\n" +
-            "    COURSE,\n" +
-            "    TRAINEE_PROGRAM,\n" +
-            "    INTERNSHIP_PROGRAM,\n" +
-            "    SCHOLARSHIP,\n" +
-            "    JOB_OPENING,\n" +
-            "    COMPETITION,\n" +
-            "    LECTURE,\n" +
-            "    NETWORKING,\n" +
-            "    WORKSHOP,\n" +
-            "    MEETUP,\n" +
-            "    OPEN_SOURCE,\n" +
-            "    OTHER" +
-            "Enum -> Modality: " +
-            "    IN_PERSON,\n" +
-            "    ONLINE,\n" +
-            "    HYBRID" +
-            "Enum -> TargetAudience: " +
-            "    UNDERGRAD_TECH_STUDENT,\n" +
-            "    BEGINNER,\n" +
-            "    INTERNSHIP_SEEKER,\n" +
-            "    JOB_SEEKER,\n" +
-            "    GENERAL_TECH_COMMUNITY";
+            "Nunca invente informações. Baseie toda a classificação apenas no conteúdo fornecido."
+            +
+            "## Formato de entrada e saída\n" +
+            "\n" +
+            "Você receberá uma lista de oportunidades, cada uma identificada por um \"RawOpportunityId\" único.\n" +
+            "\n" +
+            "Para cada oportunidade recebida, gere um resultado de classificação separado, incluindo o mesmo \"RawOpportunityId\" no campo correspondente da resposta, dentro da lista \"results\".\n" +
+            "\n" +
+            "Nunca omita nenhuma oportunidade recebida. Retorne exatamente um resultado para cada RawOpportunityId enviado.";
 
-    public ScreeningResult screen(NewsSummary news) {
+    public ScreeningBatchResult screen(List<RawOpportunity> rawOpportunity) {
+
+        String opportunitiesBlock = rawOpportunity.stream()
+                .map(this::formatRawOpportunity)
+                .collect(Collectors.joining("\n\n"));
 
         String userPrompt = """
-                Analise a seguinte oportunidade.
+                Analise as seguintes oportunidades
+                e classifique cada uma delas. %s
+           """.formatted(opportunitiesBlock);
 
-                Título:
-                %s
-
-                Resumo:
-                %s
-                """.formatted(
-                news.title(),
-                news.shortSummary()
-        );
-
-        return groqClient.sendStructuredPrompt(
+        return groqClient.sendPrompt(
                 systemPrompt,
                 userPrompt,
-                ScreeningResult.class
+                ScreeningBatchResult.class);
+    }
+
+    private String formatRawOpportunity(RawOpportunity rawOpportunity) {
+        return """
+            RawOpportunityId: %d
+            Título: %s
+            Resumo: %s
+            """.formatted(
+                rawOpportunity.getId(),
+                rawOpportunity.getTitle(),
+                rawOpportunity.getShortSummary()
         );
     }
 }

@@ -1,5 +1,6 @@
 package io.github.lucasfcz.coralink.ai;
 
+import io.github.lucasfcz.coralink.dto.ScreeningBatchResult;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,7 +22,7 @@ class GroqClientTest {
                 + "Always respond with a JSON object containing a 'message' key.";
         String userPrompt = "Say hello, respond with a JSON object containing a key 'message' with your greeting.";
 
-        String result = groqClient.sendPrompt(systemPrompt, userPrompt);
+        String result = groqClient.sendPrompt(systemPrompt, userPrompt, String.class);
 
         System.out.println("=== GroqClient Test Result ===");
         System.out.println("Response: " + result);
