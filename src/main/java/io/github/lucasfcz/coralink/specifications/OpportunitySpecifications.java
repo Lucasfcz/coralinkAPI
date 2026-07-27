@@ -28,6 +28,14 @@ public class OpportunitySpecifications {
                 .and(hasIsFree(isFree));
     }
 
+    //this get only relevant opportunities, which are the ones that are upcoming or ongoing
+    private static Specification<Opportunity> isUpcomingOrOngoing() {
+        return (root, query, cb) -> cb.or(
+                cb.isNull(root.get("eventDate")),
+                cb.greaterThanOrEqualTo(root.get("eventDate"), LocalDate.now())
+        );
+    }
+
     private static Specification<Opportunity> hasType(OpportunityType type) {
         return (root, query, cb) -> type == null
                 ? null
@@ -64,13 +72,5 @@ public class OpportunitySpecifications {
         return (root, query, cb) -> isFree == null
                 ? null
                 : cb.equal(root.get("isFree"), isFree);
-    }
-
-    //this get only relevant opportunities, which are the ones that are upcoming or ongoing
-    private static Specification<Opportunity> isUpcomingOrOngoing() {
-        return (root, query, cb) -> cb.or(
-                cb.isNull(root.get("eventDate")),
-                cb.greaterThanOrEqualTo(root.get("eventDate"), LocalDate.now())
-        );
     }
 }

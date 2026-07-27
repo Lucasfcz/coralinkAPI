@@ -14,6 +14,9 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+// class responsible for first AI screening to know if is relevant or not
+// and then second AI extraction to extract relevant information from the opportunity.
+// It also persists the results in the database.
 @Service
 @RequiredArgsConstructor
 public class ScrapingService {

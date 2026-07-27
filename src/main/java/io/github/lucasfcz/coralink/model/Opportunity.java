@@ -72,7 +72,7 @@ public class Opportunity {
     private String imageUrl;
 
     @Column(nullable = false)
-    private boolean isFree;
+    private Boolean isFree;
 
     @CreationTimestamp
     @Column(nullable = false)
@@ -82,7 +82,7 @@ public class Opportunity {
     private Opportunity(RawOpportunity rawOpportunity, String summary, OpportunityType type,
                         Set<ThematicArea> thematicAreas, Set<TargetAudience> targetAudiences, Modality modality,
                         LocalDate eventDate, LocalDate registrationDeadline, String location, String officialUrl,
-                        Double confidenceScoreAi, String imageUrl, boolean isFree) {
+                        Double confidenceScoreAi, String imageUrl, Boolean isFree) {
         this.rawOpportunity = rawOpportunity;
         this.title = rawOpportunity.getTitle();
         this.summary = summary;

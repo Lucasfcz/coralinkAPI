@@ -111,6 +111,6 @@ public class CinUfpeCollector implements Collector {
             return null;
         }
 
-        return new NewsSummary(title, summary, url, SourceName.CIN_UFPE, LocalDateTime.now());
+        return new NewsSummary(title, summary, url, sourceName(), LocalDateTime.now());
     }
 }
