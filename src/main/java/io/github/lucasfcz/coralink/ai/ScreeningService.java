@@ -1,13 +1,14 @@
 package io.github.lucasfcz.coralink.ai;
 
 import io.github.lucasfcz.coralink.dto.ScreeningBatchResult;
+import io.github.lucasfcz.coralink.dto.ScreeningResult;
+import io.github.lucasfcz.coralink.exceptions.AiCallException;
 import io.github.lucasfcz.coralink.model.RawOpportunity;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.io.IOException;
 import java.util.List;
-import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 
@@ -20,7 +21,7 @@ public class ScreeningService {
     private final GroqClient groqClient;
 
     // prompt for first screening of opportunities, to classify them as relevant or not and to determine their probably type
-    private static final String systemPrompt = "Você é um classificador especializado de oportunidades de tecnologia para estudantes de Recife e Região Metropolitana.\n" +
+    private static final String SYSTEM_PROMPT = "Você é um classificador especializado de oportunidades de tecnologia para estudantes de Recife e Região Metropolitana.\n" +
             "\n" +
             "Sua função é analisar um conteúdo e decidir se ele representa uma oportunidade relevante para estudantes de tecnologia.\n" +
             "\n" +
@@ -90,19 +91,23 @@ public class ScreeningService {
             "- notícias gerais\n" +
             "- assuntos sem relação com tecnologia, educação ou carreira.\n" +
             "\n" +
-            "Nunca invente informações. Baseie toda a classificação apenas no conteúdo fornecido."
+            "Nunca invente informações. Baseie toda a classificação apenas no conteúdo fornecido.\n"
             +
             "## Formato de entrada e saída\n" +
             "\n" +
             "Você receberá uma lista de oportunidades, cada uma identificada por um \"RawOpportunityId\" único.\n" +
             "\n" +
-            "Para cada oportunidade recebida, gere um resultado de classificação separado, incluindo o mesmo \"RawOpportunityId\" no campo correspondente da resposta, dentro da lista \"results\".\n" +
+            "Retorne um JSON compatível com o seguinte formato: {\"screeningResults\":[{\"rawOpportunityId\":1,\"isRelevant\":true,\"probablyType\":\"WORKSHOP\",\"reasoning\":\"...\"}]}.\n" +
+            "Para cada oportunidade recebida, gere um resultado de classificação separado, incluindo o mesmo \"rawOpportunityId\" dentro da lista \"screeningResults\".\n" +
             "\n" +
             "Nunca omita nenhuma oportunidade recebida. Retorne exatamente um resultado para cada RawOpportunityId enviado.";
 
-    public ScreeningBatchResult screen(List<RawOpportunity> rawOpportunity) {
+    public ScreeningBatchResult screen(List<RawOpportunity> rawOpportunities) {
+        if (rawOpportunities == null || rawOpportunities.isEmpty()) {
+            throw new IllegalArgumentException("At least one raw opportunity is required for screening");
+        }
 
-        String opportunitiesBlock = rawOpportunity.stream()
+        String opportunitiesBlock = rawOpportunities.stream()
                 .map(this::formatRawOpportunity)
                 .collect(Collectors.joining("\n\n"));
 
@@ -111,10 +116,35 @@ public class ScreeningService {
                 e classifique cada uma delas. %s
            """.formatted(opportunitiesBlock);
 
-        return groqClient.sendPrompt(
-                systemPrompt,
+        ScreeningBatchResult result = groqClient.sendPrompt(
+                SYSTEM_PROMPT,
                 userPrompt,
                 ScreeningBatchResult.class);
+        validateResponse(rawOpportunities, result);
+        return result;
+    }
+
+    private void validateResponse(List<RawOpportunity> rawOpportunities, ScreeningBatchResult result) {
+        if (rawOpportunities.stream().anyMatch(opportunity -> opportunity.getId() == null)) {
+            throw new IllegalArgumentException("Raw opportunities must be persisted before screening");
+        }
+        if (result == null || result.screeningResults() == null) {
+            throw new AiCallException("AI returned no screening results");
+        }
+
+        Set<Long> expectedIds = rawOpportunities.stream().map(RawOpportunity::getId).collect(Collectors.toSet());
+        Set<Long> returnedIds = result.screeningResults().stream()
+                .map(ScreeningResult::rawOpportunityId)
+                .collect(Collectors.toSet());
+
+        boolean containsNull = result.screeningResults().stream().anyMatch(item -> item == null
+                || item.rawOpportunityId() == null
+                || item.probablyType() == null
+                || item.reasoning() == null
+                || item.reasoning().isBlank());
+        if (containsNull || result.screeningResults().size() != rawOpportunities.size() || !returnedIds.equals(expectedIds)) {
+            throw new AiCallException("AI returned an invalid or incomplete screening result");
+        }
     }
 
     private String formatRawOpportunity(RawOpportunity rawOpportunity) {

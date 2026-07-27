@@ -1,0 +1,49 @@
+package io.github.lucasfcz.coralink.services;
+
+import io.github.lucasfcz.coralink.dto.OpportunityResponse;
+import io.github.lucasfcz.coralink.enums.Modality;
+import io.github.lucasfcz.coralink.enums.OpportunityType;
+import io.github.lucasfcz.coralink.enums.TargetAudience;
+import io.github.lucasfcz.coralink.enums.ThematicArea;
+import io.github.lucasfcz.coralink.mappers.OpportunityMapper;
+import io.github.lucasfcz.coralink.repositories.OpportunityRepository;
+import io.github.lucasfcz.coralink.specifications.OpportunitySpecifications;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+
+import java.time.LocalDate;
+import java.util.Set;
+
+@Service
+@RequiredArgsConstructor
+public class OpportunityService {
+
+    private final OpportunityRepository opportunityRepository;
+    private final OpportunityMapper opportunityMapper;
+
+    public Page<OpportunityResponse> getRelevantOpportunities(
+            OpportunityType type,
+            Set<ThematicArea> thematicAreas,
+            Set<TargetAudience> targetAudiences,
+            Modality modality,
+            Boolean isFree,
+            Pageable pageable) {
+
+        var spec = OpportunitySpecifications.filters(type, thematicAreas, targetAudiences, modality, isFree);
+
+        return opportunityRepository.findAll(spec, pageable)
+                .map(opportunityMapper::toResponse);
+    }
+
+    public OpportunityResponse getOpportunityById(Long id) {
+        return opportunityRepository.findById(id)
+                .map(opportunityMapper::toResponse)
+                .orElse(null);
+    }
+
+    public int howManyOpportunitiesAreUpcoming() {
+        return opportunityRepository.countAllByEventDateAfter(LocalDate.now());
+    }
+}

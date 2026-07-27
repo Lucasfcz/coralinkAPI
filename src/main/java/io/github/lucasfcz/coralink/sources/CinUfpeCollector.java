@@ -1,7 +1,6 @@
 package io.github.lucasfcz.coralink.sources;
 
 import io.github.lucasfcz.coralink.dto.DetailedContent;
-import io.github.lucasfcz.coralink.dto.ExtrationResult;
 import io.github.lucasfcz.coralink.dto.NewsSummary;
 import io.github.lucasfcz.coralink.enums.SourceName;
 import io.github.lucasfcz.coralink.exceptions.CollectException;
@@ -12,6 +11,7 @@ import org.jsoup.select.Elements;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
+import java.net.URI;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
@@ -20,11 +20,17 @@ import java.util.Objects;
 public class CinUfpeCollector implements Collector {
 
     private static final String URL = "https://portal.cin.ufpe.br/category/noticia/";
+    private static final int TIMEOUT_MILLIS = 10_000;
+
+    @Override
+    public SourceName sourceName() {
+        return SourceName.CIN_UFPE;
+    }
 
     @Override
     public List<NewsSummary> collect() {
         try {
-            Document doc = Jsoup.connect(URL).get();
+            Document doc = request(URL);
             Elements articles = doc.select("article");
 
             return articles.stream()
@@ -40,20 +46,37 @@ public class CinUfpeCollector implements Collector {
     @Override
     public DetailedContent detailedCollect(String newsUrl) {
         try {
-            Document doc = Jsoup.connect(newsUrl).get();
-            Element contentContainer = doc.selectFirst(".colibri-post-content");
-
-            String fullContent = contentContainer != null
-                    ? contentContainer.select("p").text()
-                    : "";
-
-            String imageUrl = extractImageUrl(doc, contentContainer);
-
-            return new DetailedContent(fullContent, imageUrl);
+            validateNewsUrl(newsUrl);
+            return extractDetailedContent(request(newsUrl));
 
         } catch (IOException e) {
             throw new CollectException("Failed to fetch detail from CIN-UFPE: " + newsUrl, e);
         }
+    }
+
+    private Document request(String url) throws IOException {
+        return Jsoup.connect(url)
+                .timeout(TIMEOUT_MILLIS)
+                .userAgent("CoralinkBot/1.0 (+https://github.com/lucasfcz/coralink)")
+                .followRedirects(false)
+                .get();
+    }
+
+    private void validateNewsUrl(String newsUrl) {
+        try {
+            URI uri = URI.create(newsUrl);
+            if (!"https".equals(uri.getScheme()) || !"portal.cin.ufpe.br".equalsIgnoreCase(uri.getHost())) {
+                throw new CollectException("Invalid CIN-UFPE news URL");
+            }
+        } catch (IllegalArgumentException exception) {
+            throw new CollectException("Invalid CIN-UFPE news URL", exception);
+        }
+    }
+
+    DetailedContent extractDetailedContent(Document doc) {
+        Element contentContainer = doc.selectFirst(".colibri-post-content");
+        String fullContent = contentContainer != null ? contentContainer.text() : "";
+        return new DetailedContent(fullContent, extractImageUrl(doc, contentContainer));
     }
 
     private String extractImageUrl(Document doc, Element contentContainer) {
@@ -72,7 +95,7 @@ public class CinUfpeCollector implements Collector {
         return null;
     }
 
-    private NewsSummary extractSummary(Element article) {
+    NewsSummary extractSummary(Element article) {
         Element titleLink = article.selectFirst("h4 a, h3 a, .entry-title a");
         Element summaryEl = article.selectFirst("p");
 
@@ -81,8 +104,12 @@ public class CinUfpeCollector implements Collector {
         }
 
         String title = titleLink.text();
-        String url = titleLink.attr("href");
+        String url = titleLink.absUrl("href");
         String summary = summaryEl.text();
+
+        if (title.isBlank() || url.isBlank() || summary.isBlank()) {
+            return null;
+        }
 
         return new NewsSummary(title, summary, url, SourceName.CIN_UFPE, LocalDateTime.now());
     }

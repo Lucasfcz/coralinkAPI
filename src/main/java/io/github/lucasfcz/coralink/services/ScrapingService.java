@@ -5,11 +5,14 @@ import io.github.lucasfcz.coralink.mappers.RawOpportunityMapper;
 import io.github.lucasfcz.coralink.model.RawOpportunity;
 import io.github.lucasfcz.coralink.repositories.RawOpportunityRepository;
 import io.github.lucasfcz.coralink.sources.Collector;
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -19,16 +22,27 @@ public class ScrapingService {
     private final RawOpportunityRepository rawOpportunityRepository;
     private final RawOpportunityMapper rawOpportunityMapper;
 
-    @Transactional
-    public void collectAllNewOpportunities() {
+    public int collectAllNewOpportunitiesAndReturnQuantityCollected() {
         List<NewsSummary> allNews = collectFromAllSources();
+        if (allNews.isEmpty()) {
+            return 0;
+        }
+
+        Set<String> knownUrls = rawOpportunityRepository.findAllByNewsUrlIn(
+                        allNews.stream().map(NewsSummary::url).collect(Collectors.toSet()))
+                .stream()
+                .map(RawOpportunity::getNewsUrl)
+                .collect(Collectors.toSet());
 
         List<RawOpportunity> newOpportunities = allNews.stream()
-                .filter(this::isNew) // if news url already exists in database will trow false and don't pass to next step
+                .collect(Collectors.toMap(NewsSummary::url, Function.identity(), (first, ignored) -> first, LinkedHashMap::new))
+                .values().stream()
+                .filter(news -> !knownUrls.contains(news.url()))
                 .map(rawOpportunityMapper::toEntity)
                 .toList();
 
         rawOpportunityRepository.saveAll(newOpportunities);
+        return newOpportunities.size();
     }
 
     private List<NewsSummary> collectFromAllSources() {
@@ -37,8 +51,4 @@ public class ScrapingService {
                 .toList();
     }
 
-    // Uses "!" because if the news already exists, we don't want to pass it to the next step of the pipeline
-    private boolean isNew(NewsSummary news) {
-        return !rawOpportunityRepository.existsByNewsUrl(news.url());
-    }
 }

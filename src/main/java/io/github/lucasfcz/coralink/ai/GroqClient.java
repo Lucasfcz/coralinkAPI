@@ -4,8 +4,6 @@ import io.github.lucasfcz.coralink.exceptions.AiCallException;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.stereotype.Component;
 
-import java.util.List;
-
 @Component
 public class GroqClient {
 
@@ -24,6 +22,14 @@ public class GroqClient {
                 .entity(responseClassType);
         }
         catch (RuntimeException e) {
+            throw new AiCallException("Failed to send prompt to AI", e);
+        }
+    }
+
+    public String sendPrompt(String systemPrompt, String userPrompt) {
+        try {
+            return chatClient.prompt().system(systemPrompt).user(userPrompt).call().content();
+        } catch (RuntimeException e) {
             throw new AiCallException("Failed to send prompt to AI", e);
         }
     }

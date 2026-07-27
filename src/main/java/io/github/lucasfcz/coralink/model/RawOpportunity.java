@@ -63,4 +63,14 @@ public class RawOpportunity {
         this.screeningReasoning = screeningReasoning;
         this.becameOpportunity = becameOpportunity;
     }
+
+    public void applyScreening(boolean relevant, OpportunityType type, String reasoning) {
+        this.screenedRelevant = relevant;
+        this.probableType = type;
+        this.screeningReasoning = reasoning;
+    }
+
+    public void markAsOpportunity() {
+        this.becameOpportunity = true;
+    }
 }

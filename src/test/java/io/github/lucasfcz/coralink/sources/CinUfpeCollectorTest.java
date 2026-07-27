@@ -1,24 +1,34 @@
 package io.github.lucasfcz.coralink.sources;
 
 import io.github.lucasfcz.coralink.dto.DetailedContent;
+import io.github.lucasfcz.coralink.dto.NewsSummary;
+import org.jsoup.Jsoup;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 class CinUfpeCollectorTest {
 
-    private static final String NEWS_URL = "https://portal.cin.ufpe.br/2026/07/24/curso-de-extensao-principios-matematicos-para-computacao-abre-inscricoes-para-reforcar-a-base-dos-estudantes-antes-do-semestre-2026-2/";
+    @Test
+    void extractsContentAndImageFromDocument() {
+        CinUfpeCollector collector = new CinUfpeCollector();
+        DetailedContent result = collector.extractDetailedContent(Jsoup.parse("""
+                <html><head><meta property='og:image' content='https://images.example/opportunity.png'></head>
+                <body><div class='colibri-post-content'><p>Primeiro parágrafo.</p><p>Segundo parágrafo.</p></div></body></html>
+                """));
+
+        assertEquals("Primeiro parágrafo. Segundo parágrafo.", result.fullContent());
+        assertEquals("https://images.example/opportunity.png", result.imageUrl());
+    }
 
     @Test
-    void detailedCollectShouldReturnContentAndImageForSpecificNewsUrl() {
+    void extractsAbsoluteUrlFromArticle() {
         CinUfpeCollector collector = new CinUfpeCollector();
-        DetailedContent result = collector.detailedCollect(NEWS_URL);
+        NewsSummary summary = collector.extractSummary(Jsoup.parse("""
+                <article><h3><a href='/news/opportunity'>Oportunidade</a></h3><p>Resumo</p></article>
+                """, "https://portal.cin.ufpe.br").selectFirst("article"));
 
-        assertNotNull(result);
-        assertNotNull(result.fullContent());
-        assertFalse(result.fullContent().isBlank());
-        assertTrue(result.fullContent().length() > 100);
+        assertNotNull(summary);
+        assertEquals("https://portal.cin.ufpe.br/news/opportunity", summary.url());
     }
 }
