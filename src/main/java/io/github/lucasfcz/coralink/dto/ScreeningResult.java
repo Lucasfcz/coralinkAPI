@@ -6,8 +6,8 @@ import jakarta.validation.constraints.NotNull;
 
 public record ScreeningResult(
         @NotNull Long rawOpportunityId,
-        boolean isRelevant,
-        @NotNull OpportunityType probablyType,
+        @NotNull Boolean isRelevant,
+        @NotNull OpportunityType probableType,
         @NotBlank String reasoning
 ) {
 }

@@ -15,20 +15,11 @@ public class GroqClient {
 
     public <T> T sendPrompt(String systemPrompt, String userPrompt, Class<T> responseClassType) {
         try {
-        return chatClient.prompt()
-                .system(systemPrompt)
-                .user(userPrompt)
-                .call()
-                .entity(responseClassType);
-        }
-        catch (RuntimeException e) {
-            throw new AiCallException("Failed to send prompt to AI", e);
-        }
-    }
-
-    public String sendPrompt(String systemPrompt, String userPrompt) {
-        try {
-            return chatClient.prompt().system(systemPrompt).user(userPrompt).call().content();
+            return chatClient.prompt()
+                    .system(systemPrompt)
+                    .user(userPrompt)
+                    .call()
+                    .entity(responseClassType);
         } catch (RuntimeException e) {
             throw new AiCallException("Failed to send prompt to AI", e);
         }

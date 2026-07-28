@@ -11,6 +11,7 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+//this class is separated from Pipeline Service to use @Transational in methods
 @Service
 @RequiredArgsConstructor
 public class PipelinePersistenceService {
@@ -21,7 +22,7 @@ public class PipelinePersistenceService {
 
     @Transactional
     public void saveScreening(RawOpportunity raw, ScreeningResult result) {
-        raw.applyScreening(result.isRelevant(), result.probablyType(), result.reasoning());
+        raw.applyScreening(result.isRelevant(), result.probableType(), result.reasoning());
         rawOpportunityRepository.save(raw);
     }
 

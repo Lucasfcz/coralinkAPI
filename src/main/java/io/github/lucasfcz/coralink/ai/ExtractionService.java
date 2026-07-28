@@ -4,6 +4,7 @@ import io.github.lucasfcz.coralink.dto.DetailedContent;
 import io.github.lucasfcz.coralink.dto.ExtractionBatchResult;
 import io.github.lucasfcz.coralink.dto.ExtractionResult;
 import io.github.lucasfcz.coralink.exceptions.AiCallException;
+import io.github.lucasfcz.coralink.exceptions.BadResponseException;
 import io.github.lucasfcz.coralink.model.RawOpportunity;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -26,23 +27,105 @@ public class ExtractionService {
 
     private final GroqClient groqClient;
 
+    private static final int MAX_RETRIES = 3;
+
     @Value("${coralink.ai.extraction.max-prompt-characters:50000}")
     private int maxPromptCharacters;
 
-    public ExtractionBatchResult extract(List<RawOpportunity> items, Map<Long, DetailedContent> contentsById) {
-        if (items == null || items.isEmpty()) {
-            throw new IllegalArgumentException("At least one raw opportunity is required for extraction");
+    public ExtractionBatchResult extract(List<RawOpportunity> rawOpportunities, Map<Long, DetailedContent> contentsById) {
+
+        if (rawOpportunities == null || rawOpportunities.isEmpty()) {
+            throw new BadResponseException("At least one raw opportunity is required for extraction");
         }
-        List<ExtractionResult> results = new ArrayList<>();
-        for (List<RawOpportunity> batch : partition(items, contentsById)) {
-            String prompt = batch.stream().map(item -> format(item, contentsById.get(item.getId())))
-                    .collect(Collectors.joining("\n\n"));
-            ExtractionBatchResult response = groqClient.sendPrompt(
-                    SYSTEM_PROMPT, "Extraia as oportunidades abaixo:\n\n" + prompt, ExtractionBatchResult.class);
-            validate(batch, response);
-            results.addAll(response.extractionResults());
+        if (rawOpportunities.stream().anyMatch(rawOpportunity -> rawOpportunity.getScreenedRelevant() == null)) {
+            throw new AiCallException("Needs to pass throw screening first before extraction");
         }
-        return new ExtractionBatchResult(results);
+
+        List<ExtractionResult> finalResults = new ArrayList<>();
+        List<RawOpportunity> pending = rawOpportunities;
+
+        for (int attempt = 0; attempt < MAX_RETRIES && !pending.isEmpty(); attempt++) {
+
+            List<RawOpportunity> retriedItems = pending.stream()
+                    .filter(item -> item.getIsRelevant() == null)
+                    .toList();
+
+            if (retriedItems.isEmpty()) {
+                break;
+            }
+
+            List<ExtractionResult> attemptResults = new ArrayList<>();
+
+            for (List<RawOpportunity> batch : partition(retriedItems, contentsById)) {
+
+                ExtractionBatchResult response = sendExtractionRequest(batch, contentsById);
+
+                List<ExtractionResult> invalidResults =
+                        getInvalidExtractionResults(response);
+
+                attemptResults.addAll(
+                        response.extractionResults().stream()
+                                .filter(r -> !invalidResults.contains(r))
+                                .toList()
+                );
+            }
+
+            finalResults.addAll(attemptResults);
+
+            Set<Long> processedIds = attemptResults.stream()
+                    .map(ExtractionResult::rawOpportunityId)
+                    .collect(Collectors.toSet());
+
+            pending = pending.stream()
+                    .filter(item -> !processedIds.contains(item.getId()))
+                    .toList();
+        }
+
+        if (finalResults.size() != rawOpportunities.size()) {
+            throw new AiCallException("Unable to extract all opportunities after retries.");
+        }
+
+        return new ExtractionBatchResult(finalResults);
+    }
+
+    private ExtractionBatchResult sendExtractionRequest(
+            List<RawOpportunity> batch,
+            Map<Long, DetailedContent> contentsById) {
+
+        String prompt = batch.stream()
+                .map(item -> format(item, contentsById.get(item.getId())))
+                .collect(Collectors.joining("\n\n"));
+
+        ExtractionBatchResult response = groqClient.sendPrompt(
+                SYSTEM_PROMPT,
+                "Extraia as oportunidades abaixo:\n\n" + prompt,
+                ExtractionBatchResult.class
+        );
+
+        if (response == null || response.extractionResults() == null) {
+            throw new AiCallException("AI returned no extraction results");
+        }
+
+        return response;
+    }
+
+    private List<ExtractionResult> getInvalidExtractionResults(
+            ExtractionBatchResult response) {
+
+        return response.extractionResults().stream()
+                .filter(r ->
+                        r == null
+                                || r.rawOpportunityId() == null
+                                || r.summary() == null
+                                || r.summary().isBlank()
+                                || r.type() == null
+                                || r.thematicAreas() == null
+                                || r.targetAudiences() == null
+                                || r.confidenceScore() == null
+                                || r.confidenceScore() < 0
+                                || r.confidenceScore() > 1
+                )
+                .toList();
     }
 
     private List<List<RawOpportunity>> partition(List<RawOpportunity> items, Map<Long, DetailedContent> contentsById) {
@@ -67,40 +150,6 @@ public class ExtractionService {
             batches.add(List.copyOf(current));
         }
         return batches;
-    }
-
-    private void validate(List<RawOpportunity> batch, ExtractionBatchResult response) {
-        if (response == null || response.extractionResults() == null) {
-            throw new AiCallException("AI returned no extraction results");
-        }
-
-        List<ExtractionResult> results = response.extractionResults();
-
-        if (results.stream().anyMatch(Objects::isNull)) {
-            throw new AiCallException("AI returned a null extraction result within the batch");
-        }
-
-        if (results.stream().anyMatch(this::hasInvalidFields)) {
-            throw new AiCallException("AI returned an extraction result with missing or invalid fields");
-        }
-
-        Set<Long> expectedIds = batch.stream().map(RawOpportunity::getId).collect(Collectors.toSet());
-        Set<Long> returnedIds = results.stream().map(ExtractionResult::rawOpportunityId).collect(Collectors.toSet());
-
-        if (results.size() != batch.size() || !expectedIds.equals(returnedIds)) {
-            throw new AiCallException("AI returned a different set of items than the batch sent");
-        }
-    }
-
-    private boolean hasInvalidFields(ExtractionResult result) {
-        return result.rawOpportunityId() == null
-                || result.summary() == null || result.summary().isBlank()
-                || result.type() == null
-                || result.thematicAreas() == null
-                || result.targetAudiences() == null
-                || result.confidenceScore() == null
-                || result.confidenceScore() < 0
-                || result.confidenceScore() > 1;
     }
 
     private String format(RawOpportunity item, DetailedContent content) {

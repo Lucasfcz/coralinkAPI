@@ -1,7 +1,7 @@
 package io.github.lucasfcz.coralink.services;
 
-import io.github.lucasfcz.coralink.dto.CollectionResult;
 import io.github.lucasfcz.coralink.dto.NewsSummary;
+import io.github.lucasfcz.coralink.dto.PhaseResult;
 import io.github.lucasfcz.coralink.enums.SourceName;
 import io.github.lucasfcz.coralink.repositories.RawOpportunityRepository;
 import io.github.lucasfcz.coralink.sources.Collector;
@@ -32,7 +32,7 @@ class ScrapingServiceTest {
 
         ScrapingService scrapingService = new ScrapingService(List.of(failingCollector, workingCollector), repository);
 
-        CollectionResult result = scrapingService.collectAllNewOpportunitiesAndReturnQuantityCollected();
+        PhaseResult result = scrapingService.collectAllNewOpportunitiesAndReturnQuantityCollected();
 
         assertEquals(1, result.collected());
         assertEquals(1, result.sourceFailures());
