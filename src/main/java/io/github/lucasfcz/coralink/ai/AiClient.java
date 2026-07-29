@@ -5,11 +5,11 @@ import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.stereotype.Component;
 
 @Component
-public class GroqClient {
+public class AiClient {
 
     private final ChatClient chatClient;
 
-    public GroqClient(ChatClient.Builder builder) {
+    public AiClient(ChatClient.Builder builder) {
         this.chatClient = builder.build();
     }
 

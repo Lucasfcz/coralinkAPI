@@ -16,12 +16,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 
-class GroqClientTest {
+class AiClientTest {
 
     @Test
     void validatesThatTheAiReturnsExactlyOneResultForEveryOpportunity() throws Exception {
         RawOpportunity opportunity = rawOpportunity(42L);
-        GroqClient ai = fixedResponse(
+        AiClient ai = fixedResponse(
                 new ScreeningBatchResult(List.of(new ScreeningResult(42L, true, OpportunityType.WORKSHOP, "É um workshop."))));
         ScreeningService service = new ScreeningService(ai);
 
@@ -32,7 +32,7 @@ class GroqClientTest {
 
     @Test
     void rejectsAnIncompleteAiResponse() throws Exception {
-        GroqClient ai = fixedResponse(new ScreeningBatchResult(List.of()));
+        AiClient ai = fixedResponse(new ScreeningBatchResult(List.of()));
         ScreeningService service = new ScreeningService(ai);
 
         assertThrows(AiCallException.class, () -> service.screen(List.of(rawOpportunity(42L))));
@@ -52,10 +52,10 @@ class GroqClientTest {
         return opportunity;
     }
 
-    private GroqClient fixedResponse(ScreeningBatchResult response) {
+    private AiClient fixedResponse(ScreeningBatchResult response) {
         ChatClient.Builder builderMock = mock(ChatClient.Builder.class);
 
-        return new GroqClient(builderMock) {
+        return new AiClient(builderMock) {
             @Override
             public <T> T sendPrompt(String systemPrompt, String userPrompt, Class<T> responseClassType) {
                 return responseClassType.cast(response);

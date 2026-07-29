@@ -12,27 +12,23 @@ import org.springframework.stereotype.Service;
 import java.util.*;
 import java.util.stream.Collectors;
 
-
-// this class is responsible for AI first call to know if the opportunity is relevant for universitaries/students
-// and what is your probably type, for least the AI sends her justify for results
 @Service
 @RequiredArgsConstructor
 public class ScreeningService {
 
-    private final GroqClient groqClient;
+    private final AiClient aiClient;
 
     private static final int MAX_RETRIES = 3;
 
-    // prompt for first screening of opportunities, to classify them as relevant or not and to determine their probable type
     private static final String SYSTEM_PROMPT = """
             Você é um classificador especializado de oportunidades de tecnologia para estudantes de Recife e Região Metropolitana.
-            
+
             Sua função é analisar um conteúdo e decidir se ele representa uma oportunidade relevante para estudantes de tecnologia.
-            
+
             ## Público-alvo
-            
+
             Considere prioritariamente estudantes de:
-            
+
             - ADS
             - Ciência da Computação
             - Sistemas de Informação
@@ -40,11 +36,11 @@ public class ScreeningService {
             - Engenharia da Computação
             - áreas correlatas
             - iniciantes em programação
-            
+
             ## Critérios de relevância
-            
+
             Considere relevante quando o conteúdo envolver educação, carreira ou tecnologia, como:
-            
+
             - programação
             - desenvolvimento web
             - desenvolvimento mobile
@@ -61,11 +57,11 @@ public class ScreeningService {
             - engenharia de software
             - inovação
             - empreendedorismo em tecnologia
-            
+
             Escolha o tipo mais específico possível.
-            
+
             Exemplos:
-            
+
             - "Workshop de Spring Boot" → WORKSHOP
             - "Hackathon Porto Digital" → HACKATHON
             - "Programa de estágio da Accenture" → INTERNSHIP_PROGRAM
@@ -76,15 +72,15 @@ public class ScreeningService {
             - "Meetup do GDG Recife" → MEETUP
             - "Campus Party" → EVENT
             - "Edital FACEPE" → EDITAL
-            
+
             Utilize EVENT apenas quando houver um evento tecnológico relevante que não possa ser classificado em uma categoria mais específica.
-            
+
             Utilize OTHER somente quando o conteúdo for relevante para estudantes de tecnologia, mas não se encaixar em nenhuma das categorias acima.
-            
+
             ## Critérios negativos
-            
+
             Classifique como não relevante quando o conteúdo tratar apenas de:
-            
+
             - assuntos que não são considerados oportunidades para o universitario em geral
             - assuntos que nao podem ser considerados oportunidades para universitarios, exemplo: Henrique Foncerca vence hackthoon..., essa noticia não pode ser considerada uma oportunidade pois não é algo que o universita pode se beneficiar diretamente.
             - noticias com datas passadas
@@ -94,74 +90,66 @@ public class ScreeningService {
             - promoções comerciais
             - notícias gerais
             - assuntos sem relação com tecnologia, educação ou carreira.
-            
+
             Nunca invente informações. Baseie toda a classificação apenas no conteúdo fornecido.
             ## Formato de entrada e saída
-            
+
             Você receberá uma lista de oportunidades, cada uma identificada por um "RawOpportunityId" único.
-            
+
             Retorne um JSON compatível com o seguinte formato: {"screeningResults":[{"rawOpportunityId":1,"isRelevant":true,"probableType":"WORKSHOP","reasoning":"..."}]}.
             Para cada oportunidade recebida, gere um resultado de classificação separado, incluindo o mesmo "rawOpportunityId" dentro da lista "screeningResults".
-            
+
             Nunca omita nenhuma oportunidade recebida. Retorne exatamente um resultado para cada RawOpportunityId enviado.""";
 
     public ScreeningBatchResult screen(List<RawOpportunity> rawOpportunityList) {
-
         if (rawOpportunityList == null || rawOpportunityList.isEmpty()) {
             throw new BadResponseException("At least one raw opportunity is required for screening");
         }
 
-        List<ScreeningResult> finalResults = new ArrayList<>();
-        //this variable will hold the opportunities that need to be retried in case of invalid results
-        List<RawOpportunity> rawOpportunities = rawOpportunityList;
+        // rastreia apenas resultados já resolvidos com sucesso, trata itens inválidos e itens que a IA simplesmente omitiu da resposta
+        Map<Long, ScreeningResult> validRawOpportunities = new LinkedHashMap<>();
+        List<RawOpportunity> pending = rawOpportunityList;
 
-        for (int attempt = 0; attempt < MAX_RETRIES && !rawOpportunities.isEmpty(); attempt++) {
+        // caso chegue no numero maximo de tentativas, o sistema descarta as invalidas e usa apenas as validas
+        for (int attempt = 1; attempt <= MAX_RETRIES && !pending.isEmpty(); attempt++) {
+            ScreeningBatchResult response = sendScreeningRequest(pending);
+            List<ScreeningResult> invalid = getScreenInvalidResults(response);
 
-            ScreeningBatchResult response = sendScreeningRequest(rawOpportunities);
-            List<ScreeningResult> invalidResults = getScreenInvalidResults(response);
+            response.screeningResults().stream()
+                    .filter(r -> r != null && r.rawOpportunityId() != null && !invalid.contains(r))
+                    .forEach(r -> validRawOpportunities.put(r.rawOpportunityId(), r));
 
-            finalResults.addAll(
-                    response.screeningResults().stream()
-                            .filter(r -> !invalidResults.contains(r))
-                            .toList()
-            );
-
-            if (invalidResults.isEmpty()) {
-                break;
-            }
-
-            Set<Long> invalidIds = invalidResults.stream()
-                    .map(ScreeningResult::rawOpportunityId)
-                    .filter(Objects::nonNull)
-                    .collect(Collectors.toSet());
-
-            // Filter out the opportunities that have invalid results
-            rawOpportunities = rawOpportunities.stream()
-                    .filter(o -> invalidIds.contains(o.getId()))
+            pending = pending.stream()
+                    .filter(o -> !validRawOpportunities.containsKey(o.getId()))
                     .toList();
         }
 
-        if (finalResults.size() != rawOpportunityList.size()) {
-            throw new AiCallException("Unable to obtain valid screening for all opportunities after retries.");
+        if (!pending.isEmpty()) {
+            List<Long> failedIds = pending.stream().map(RawOpportunity::getId).toList();
+            throw new AiCallException("Unable to obtain valid screening after " + MAX_RETRIES
+                    + " attempts for raw opportunity ids: " + failedIds);
         }
+
+        List<ScreeningResult> finalResults = rawOpportunityList.stream()
+                .map(o -> validRawOpportunities.get(o.getId()))
+                .toList();
 
         return new ScreeningBatchResult(finalResults);
     }
 
     private ScreeningBatchResult sendScreeningRequest(List<RawOpportunity> rawOpportunities) {
-
         String opportunitiesBlock = rawOpportunities.stream()
                 .map(this::formatRawOpportunity)
                 .collect(Collectors.joining("\n\n"));
 
         String userPrompt = """
-            Analise as seguintes oportunidades
-            e classifique cada uma delas.
+                Analise as seguintes oportunidades
+                e classifique cada uma delas.
 
-            %s
-            """.formatted(opportunitiesBlock);
+                %s
+                """.formatted(opportunitiesBlock);
 
-        ScreeningBatchResult result = groqClient.sendPrompt(
+        ScreeningBatchResult result = aiClient.sendPrompt(
                 SYSTEM_PROMPT,
                 userPrompt,
                 ScreeningBatchResult.class
@@ -175,10 +163,10 @@ public class ScreeningService {
     }
 
     private List<ScreeningResult> getScreenInvalidResults(ScreeningBatchResult result) {
-
         Set<OpportunityType> validTypes = EnumSet.allOf(OpportunityType.class);
+        List<ScreeningResult> results = result.screeningResults();
 
-        return result.screeningResults().stream()
+        return results.stream()
                 .filter(r -> r == null
                         || r.rawOpportunityId() == null
                         || r.isRelevant() == null
@@ -186,8 +174,8 @@ public class ScreeningService {
                         || r.reasoning() == null
                         || r.reasoning().isBlank()
                         || !validTypes.contains(r.probableType())
-                        || result.screeningResults().stream().anyMatch(other -> other != r && Objects.equals(other.rawOpportunityId(), r.rawOpportunityId()))
-                )
+                        || results.stream().anyMatch(other -> other != r
+                        && Objects.equals(other.rawOpportunityId(), r.rawOpportunityId())))
                 .toList();
     }
 
