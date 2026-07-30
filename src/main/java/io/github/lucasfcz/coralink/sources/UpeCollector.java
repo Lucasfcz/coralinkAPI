@@ -5,9 +5,9 @@ import io.github.lucasfcz.coralink.sources.collector.WordPressCollector;
 import org.springframework.stereotype.Component;
 
 @Component
-public class CinUfpeCollector extends WordPressCollector {
+public class UpeCollector extends WordPressCollector {
 
-    private static final String BASE_URL = "https://portal.cin.ufpe.br";
+    private static final String BASE_URL = "https://upe.br";
 
     @Override
     protected String baseUrl() {
@@ -15,12 +15,7 @@ public class CinUfpeCollector extends WordPressCollector {
     }
 
     @Override
-    protected String postsEndpoint() {
-        return BASE_URL + "/wp-json/wp/v2/posts?per_page=20&categories_exclude=1&_embed=wp:featuredmedia";
-    }
-
-    @Override
     public SourceName sourceName() {
-        return SourceName.CIN_UFPE;
+        return SourceName.UPE;
     }
 }

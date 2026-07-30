@@ -4,7 +4,7 @@ import io.github.lucasfcz.coralink.dto.NewsSummary;
 import io.github.lucasfcz.coralink.dto.PhaseResult;
 import io.github.lucasfcz.coralink.enums.SourceName;
 import io.github.lucasfcz.coralink.repositories.RawOpportunityRepository;
-import io.github.lucasfcz.coralink.sources.Collector;
+import io.github.lucasfcz.coralink.sources.collector.Collector;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDateTime;

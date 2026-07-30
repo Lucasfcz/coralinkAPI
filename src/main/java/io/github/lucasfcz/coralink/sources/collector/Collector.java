@@ -1,4 +1,4 @@
-package io.github.lucasfcz.coralink.sources;
+package io.github.lucasfcz.coralink.sources.collector;
 
 import io.github.lucasfcz.coralink.dto.DetailedContent;
 import io.github.lucasfcz.coralink.dto.NewsSummary;

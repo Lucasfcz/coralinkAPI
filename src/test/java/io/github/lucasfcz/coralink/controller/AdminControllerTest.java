@@ -1,6 +1,6 @@
 package io.github.lucasfcz.coralink.controller;
 
-import io.github.lucasfcz.coralink.config.AdminApiKeyProperties;
+import io.github.lucasfcz.coralink.configs.AdminApiKeyProperties;
 import io.github.lucasfcz.coralink.dto.PipelineRunResult;
 import io.github.lucasfcz.coralink.exceptions.GlobalExceptionHandler;
 import io.github.lucasfcz.coralink.exceptions.InvalidAdminApiKeyException;

@@ -4,7 +4,7 @@ import io.github.lucasfcz.coralink.dto.NewsSummary;
 import io.github.lucasfcz.coralink.mappers.RawOpportunityMapper;
 import io.github.lucasfcz.coralink.model.RawOpportunity;
 import io.github.lucasfcz.coralink.repositories.RawOpportunityRepository;
-import io.github.lucasfcz.coralink.sources.Collector;
+import io.github.lucasfcz.coralink.sources.collector.Collector;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

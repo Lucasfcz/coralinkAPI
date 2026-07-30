@@ -30,6 +30,11 @@ public class OpportunityController {
 
     }
 
+    @GetMapping("/{title}")
+    public ResponseEntity<Page<OpportunityResponse>> findOpportunityById(@PathVariable String title, Pageable pageable) {
+        return ResponseEntity.ok(opportunityService.getOpportunitiesByTitle(title, pageable));
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<OpportunityResponse> findOpportunityById(@PathVariable Long id) {
         return ResponseEntity.ok(opportunityService.getOpportunityById(id));
