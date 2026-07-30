@@ -16,7 +16,8 @@ public class OpportunityMapper {
                 .thematicAreas(result.thematicAreas())
                 .targetAudiences(result.targetAudiences())
                 .modality(result.modality())
-                .eventDate(result.eventDate())
+                .startDate(result.startDate())
+                .endDate(result.endDate())
                 .registrationDeadline(result.registrationDeadline())
                 .location(result.location())
                 .officialUrl(raw.getNewsUrl())
@@ -35,7 +36,8 @@ public class OpportunityMapper {
                 op.getThematicAreas(),
                 op.getTargetAudiences(),
                 op.getModality(),
-                op.getEventDate(),
+                op.getStartDate(),
+                op.getEndDate(),
                 op.getRegistrationDeadline(),
                 op.getLocation(),
                 op.getOfficialUrl(),

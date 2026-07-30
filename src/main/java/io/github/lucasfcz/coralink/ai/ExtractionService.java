@@ -22,13 +22,39 @@ public class ExtractionService {
     private static final int MAX_RETRIES = 3;
 
     private static final String SYSTEM_PROMPT = """
-            Você extrai oportunidades de tecnologia para estudantes a partir de notícias completas.
-            Retorne somente dados presentes no texto. Não invente datas, local, modalidade ou preço: use null para campos desconhecidos.
-            confidenceScore deve estar entre 0.0 e 1.0. Para cada item, preserve exatamente o rawOpportunityId recebido.
-            Retorne JSON com extractionResults, contendo rawOpportunityId, summary, type, thematicAreas, targetAudiences,
-            modality, eventDate, registrationDeadline, location, isFree e confidenceScore. Nunca omita um item.
-            """;
+        Você extrai oportunidades de tecnologia para estudantes a partir de notícias completas.
 
+        Retorne somente dados presentes no texto.
+        Nunca invente datas, local, modalidade ou preço.
+        Caso a oportunidade nao se refira em nenhum momento a taxa, dinheiro ou pagar para ter acesso,
+        considere que eh uma oportunidade gratuita ou seja isFree = true.
+        Use null quando uma informação não estiver disponível(excluindo o campo isFree).
+
+        confidenceScore deve estar entre 0.0 e 1.0.
+        Preserve exatamente o rawOpportunityId recebido.
+        
+        Retorne JSON contendo extractionResults com:
+        rawOpportunityId, summary, type, thematicAreas, targetAudiences,
+        modality, startDate, endDate, registrationDeadline,
+        location, isFree e confidenceScore.
+
+        Regras para datas:
+        - Use o formato ISO yyyy-MM-dd.
+        - Para eventos de um único dia, startDate e endDate devem ser iguais.
+        - Para eventos com duração ou período, startDate deve ser o primeiro dia
+          e endDate deve ser o último dia.
+        - Nunca retorne intervalos em uma única string.
+        
+        Exemplo:
+        "Curso acontece de 03/08/2026 até 07/08/2026"
+        deve retornar:
+        {
+          "startDate": "2026-08-03",
+          "endDate": "2026-08-07"
+        }
+
+        Nunca omita itens recebidos.
+        """;
     private final AiClient aiClient;
 
     @Value("${coralink.ai.extraction.max-prompt-characters:50000}")

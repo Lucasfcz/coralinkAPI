@@ -3,114 +3,150 @@ package io.github.lucasfcz.coralink.sources;
 import io.github.lucasfcz.coralink.dto.DetailedContent;
 import io.github.lucasfcz.coralink.dto.NewsSummary;
 import io.github.lucasfcz.coralink.enums.SourceName;
-import io.github.lucasfcz.coralink.exceptions.CollectException;
-import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
-import org.jsoup.select.Elements;
 import org.springframework.stereotype.Component;
 
-import java.io.IOException;
-import java.net.URI;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
 
 @Component
-public class CinUfpeCollector implements Collector {
+public class CinUfpeCollector extends WordPressCollector {
 
-    private static final String URL = "https://portal.cin.ufpe.br/category/noticia/";
-    private static final int TIMEOUT_MILLIS = 10_000;
+    private static final String BASE_URL = "https://portal.cin.ufpe.br";
+    private static final String NEWS_URL = BASE_URL + "/category/noticia/";
 
-    @Override
-    public SourceName sourceName() {
-        return SourceName.CIN_UFPE;
+    public CinUfpeCollector(SourceTypeDetector detector) {
+        super(detector);
     }
 
     @Override
-    public List<NewsSummary> collect() {
-        try {
-            Document doc = request(URL);
-            Elements articles = doc.select("article");
+    protected String baseUrl() {
+        return BASE_URL;
+    }
 
-            return articles.stream()
-                    .map(this::extractSummary)
+    @Override
+    protected String postsEndpoint() {
+        return BASE_URL + "/wp-json/wp/v2/posts?per_page=20";
+    }
+
+    @Override
+    protected List<NewsSummary> collectHtml() {
+
+        try {
+            Document doc = requestDocument(NEWS_URL);
+
+            return doc.select("article")
+                    .stream()
+                    .map(this::extractHtmlSummary)
                     .filter(Objects::nonNull)
                     .toList();
 
-        } catch (IOException e) {
-            throw new CollectException("Failed to collect data from CIN-UFPE", e);
+        } catch (Exception exception) {
+            throw new RuntimeException(
+                    "Failed HTML collection from CIN UFPE",
+                    exception
+            );
         }
     }
 
     @Override
-    public DetailedContent detailedCollect(String newsUrl) {
-        try {
-            validateNewsUrl(newsUrl);
-            return extractDetailedContent(request(newsUrl));
+    protected DetailedContent detailedWordPress(String url) {
 
-        } catch (IOException e) {
-            throw new CollectException("Failed to fetch detail from CIN-UFPE: " + newsUrl, e);
+        try {
+            Document doc = requestDocument(url);
+
+            Element content = doc.selectFirst(".colibri-post-content");
+
+            String text = content != null
+                    ? content.text()
+                    : "";
+
+            return new DetailedContent(
+                    text,
+                    extractImageUrl(doc, content)
+            );
+
+        } catch (Exception exception) {
+            throw new RuntimeException(
+                    "Failed wordpress detail extraction from CIN UFPE",
+                    exception
+            );
         }
     }
 
-    private Document request(String url) throws IOException {
-        return Jsoup.connect(url)
-                .timeout(TIMEOUT_MILLIS)
-                .userAgent("CoralinkBot/1.0 (+https://github.com/lucasfcz/coralink)")
-                .followRedirects(false)
-                .get();
-    }
+    @Override
+    protected DetailedContent detailedHtml(String url) {
 
-    private void validateNewsUrl(String newsUrl) {
         try {
-            URI uri = URI.create(newsUrl);
-            if (!"https".equals(uri.getScheme()) || !"portal.cin.ufpe.br".equalsIgnoreCase(uri.getHost())) {
-                throw new CollectException("Invalid CIN-UFPE news URL");
+            Document doc = requestDocument(url);
+
+            Element content = doc.selectFirst(".colibri-post-content");
+
+            if (content == null) {
+                content = doc.selectFirst("main");
             }
-        } catch (IllegalArgumentException exception) {
-            throw new CollectException("Invalid CIN-UFPE news URL", exception);
+
+            String text = content != null
+                    ? content.text()
+                    : "";
+
+            return new DetailedContent(
+                    text,
+                    extractImageUrl(doc, content)
+            );
+
+        } catch (Exception exception) {
+            throw new RuntimeException("Failed html detail extraction from CIN UFPE", exception);
         }
     }
 
-    DetailedContent extractDetailedContent(Document doc) {
-        Element contentContainer = doc.selectFirst(".colibri-post-content");
-        String fullContent = contentContainer != null ? contentContainer.text() : "";
-        return new DetailedContent(fullContent, extractImageUrl(doc, contentContainer));
+    private NewsSummary extractHtmlSummary(Element article) {
+
+        Element titleLink = article.selectFirst("h4 a, h3 a, .entry-title a");
+        Element summaryElement = article.selectFirst("p");
+
+        if (titleLink == null) {
+            return null;
+        }
+
+        String title = titleLink.text();
+        String url = titleLink.absUrl("href");
+
+        String summary = summaryElement != null
+                ? summaryElement.text()
+                : title;
+
+        if (title.isBlank() || url.isBlank()) {
+            return null;
+        }
+
+        return new NewsSummary(title, summary, url, sourceName(), LocalDateTime.now()
+        );
     }
 
-    private String extractImageUrl(Document doc, Element contentContainer) {
+    private String extractImageUrl(Document doc, Element content) {
+
         Element ogImage = doc.selectFirst("meta[property=og:image]");
+
         if (ogImage != null) {
             return ogImage.attr("content");
         }
 
-        if (contentContainer != null) {
-            Element firstImg = contentContainer.selectFirst("img");
-            if (firstImg != null) {
-                return firstImg.attr("src");
+        if (content != null) {
+            Element image = content.selectFirst("img");
+
+            if (image != null) {
+                return image.absUrl("src");
             }
         }
 
         return null;
     }
 
-    NewsSummary extractSummary(Element article) {
-        Element titleLink = article.selectFirst("h4 a, h3 a, .entry-title a");
-        Element summaryEl = article.selectFirst("p");
-
-        if (titleLink == null || summaryEl == null) {
-            return null;
-        }
-
-        String title = titleLink.text();
-        String url = titleLink.absUrl("href");
-        String summary = summaryEl.text();
-
-        if (title.isBlank() || url.isBlank() || summary.isBlank()) {
-            return null;
-        }
-
-        return new NewsSummary(title, summary, url, sourceName(), LocalDateTime.now());
+    @Override
+    public SourceName sourceName() {
+        return SourceName.CIN_UFPE;
     }
 }

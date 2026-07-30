@@ -52,7 +52,9 @@ public class Opportunity {
     @Enumerated(EnumType.STRING)
     private Modality modality;
 
-    private LocalDate eventDate;
+    private LocalDate startDate;
+
+    private LocalDate endDate;
 
     private LocalDate registrationDeadline;
 
@@ -81,7 +83,7 @@ public class Opportunity {
     @Builder
     private Opportunity(RawOpportunity rawOpportunity, String summary, OpportunityType type,
                         Set<ThematicArea> thematicAreas, Set<TargetAudience> targetAudiences, Modality modality,
-                        LocalDate eventDate, LocalDate registrationDeadline, String location, String officialUrl,
+                        LocalDate startDate, LocalDate endDate, LocalDate registrationDeadline, String location, String officialUrl,
                         Double confidenceScoreAi, String imageUrl, Boolean isFree) {
         this.rawOpportunity = rawOpportunity;
         this.title = rawOpportunity.getTitle();
@@ -90,7 +92,8 @@ public class Opportunity {
         this.thematicAreas = thematicAreas != null ? thematicAreas : new HashSet<>();
         this.targetAudiences = targetAudiences != null ? targetAudiences : new HashSet<>();
         this.modality = modality;
-        this.eventDate = eventDate;
+        this.startDate = startDate;
+        this.endDate = endDate;
         this.registrationDeadline = registrationDeadline;
         this.location = location;
         this.officialUrl = officialUrl;

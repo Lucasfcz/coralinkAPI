@@ -23,6 +23,7 @@ public class OpportunityService {
     private final OpportunityRepository opportunityRepository;
     private final OpportunityMapper opportunityMapper;
 
+    // only get relevant opportunities that are upcoming or ongoing, and apply filters if provided
     public Page<OpportunityResponse> getRelevantOpportunities(
             OpportunityType type,
             Set<ThematicArea> thematicAreas,
@@ -33,8 +34,11 @@ public class OpportunityService {
 
         var spec = OpportunitySpecifications.filters(type, thematicAreas, targetAudiences, modality, isFree);
 
-        return opportunityRepository.findAll(spec, pageable)
-                .map(opportunityMapper::toResponse);
+        return opportunityRepository.findAll(spec, pageable).map(opportunityMapper::toResponse);
+    }
+
+    public Page<OpportunityResponse> getOpportunitiesByTitle(String title, Pageable pageable) {
+        return opportunityRepository.findOpportunitiesByTitleContainsIgnoreCase(title, pageable).map(opportunityMapper::toResponse);
     }
 
     public OpportunityResponse getOpportunityById(Long id) {
@@ -44,6 +48,6 @@ public class OpportunityService {
     }
 
     public int howManyOpportunitiesAreUpcoming() {
-        return opportunityRepository.countAllByEventDateAfter(LocalDate.now());
+        return opportunityRepository.countAllByStartDateAfter(LocalDate.now());
     }
 }

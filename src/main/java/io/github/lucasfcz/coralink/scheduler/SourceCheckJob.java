@@ -14,7 +14,7 @@ public class SourceCheckJob {
 
     private final PipelineService pipelineService;
 
-    @Scheduled(fixedRateString = "${coralink.scheduler.source-check-rate-ms:7200000}")
+    @Scheduled(fixedDelayString = "${coralink.scheduler.source-check-rate-ms:1000}")
     public void checkSources() {
         log.info("Starting Coralink pipeline");
         PipelineRunResult result = pipelineService.runFullPipeline();
