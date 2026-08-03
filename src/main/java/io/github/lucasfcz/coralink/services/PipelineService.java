@@ -33,7 +33,7 @@ public class PipelineService {
     private final PipelinePersistenceService persistenceService;
     private final List<Collector> collectors;
 
-    @CacheEvict(value = "opportunities")
+    @CacheEvict(value = "opportunities", allEntries = true)
     public PipelineRunResult runFullPipeline() {
         Instant start = Instant.now();
         log.info("Pipeline started");
