@@ -1,10 +1,7 @@
 package io.github.lucasfcz.coralink.services;
 
 import io.github.lucasfcz.coralink.dto.OpportunityResponse;
-import io.github.lucasfcz.coralink.enums.Modality;
-import io.github.lucasfcz.coralink.enums.OpportunityType;
-import io.github.lucasfcz.coralink.enums.TargetAudience;
-import io.github.lucasfcz.coralink.enums.ThematicArea;
+import io.github.lucasfcz.coralink.enums.*;
 import io.github.lucasfcz.coralink.mappers.OpportunityMapper;
 import io.github.lucasfcz.coralink.repositories.OpportunityRepository;
 import io.github.lucasfcz.coralink.specifications.OpportunitySpecifications;
@@ -27,12 +24,12 @@ public class OpportunityService {
     public Page<OpportunityResponse> getRelevantOpportunities(
             OpportunityType type,
             Set<ThematicArea> thematicAreas,
-            Set<TargetAudience> targetAudiences,
+            Set<TargetCourseAudience> targetCourseAudiences,
             Modality modality,
             Boolean isFree,
             Pageable pageable) {
 
-        var spec = OpportunitySpecifications.filters(type, thematicAreas, targetAudiences, modality, isFree);
+        var spec = OpportunitySpecifications.filters(type, thematicAreas, targetCourseAudiences, modality, isFree);
 
         return opportunityRepository.findAll(spec, pageable).map(opportunityMapper::toResponse);
     }

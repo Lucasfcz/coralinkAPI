@@ -22,7 +22,7 @@ public class PipelinePersistenceService {
 
     @Transactional
     public void saveScreening(RawOpportunity raw, ScreeningResult result) {
-        raw.applyScreening(result.isRelevant(), result.probableType(), result.reasoning());
+        raw.applyScreening(result.isRelevant());
         rawOpportunityRepository.save(raw);
     }
 

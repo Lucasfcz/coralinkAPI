@@ -1,9 +1,6 @@
 package io.github.lucasfcz.coralink.dto;
 
-import io.github.lucasfcz.coralink.enums.Modality;
-import io.github.lucasfcz.coralink.enums.OpportunityType;
-import io.github.lucasfcz.coralink.enums.TargetAudience;
-import io.github.lucasfcz.coralink.enums.ThematicArea;
+import io.github.lucasfcz.coralink.enums.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
@@ -15,7 +12,7 @@ public record ExtractionResult(
         @NotBlank String summary,
         @NotNull OpportunityType type,
         @NotNull Set<ThematicArea> thematicAreas,
-        @NotNull Set<TargetAudience> targetAudiences,
+        @NotNull Set<TargetCourseAudience> targetCourseAudiences,
         @NotNull Modality modality,
         @NotNull LocalDate startDate,
         @NotNull LocalDate endDate,

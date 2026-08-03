@@ -47,7 +47,7 @@ public class Opportunity {
     @CollectionTable(name = "opportunity_target_audiences", joinColumns = @JoinColumn(name = "opportunity_id"))
     @Enumerated(EnumType.STRING)
     @Column(name = "target_audience")
-    private Set<TargetAudience> targetAudiences = new HashSet<>();
+    private Set<TargetCourseAudience> targetCourseAudiences = new HashSet<>();
 
     @Enumerated(EnumType.STRING)
     private Modality modality;
@@ -82,7 +82,7 @@ public class Opportunity {
 
     @Builder
     private Opportunity(RawOpportunity rawOpportunity, String summary, OpportunityType type,
-                        Set<ThematicArea> thematicAreas, Set<TargetAudience> targetAudiences, Modality modality,
+                        Set<ThematicArea> thematicAreas, Set<TargetCourseAudience> targetCourseAudiences, Modality modality,
                         LocalDate startDate, LocalDate endDate, LocalDate registrationDeadline, String location, String officialUrl,
                         Double confidenceScoreAi, String imageUrl, Boolean isFree) {
         this.rawOpportunity = rawOpportunity;
@@ -90,7 +90,7 @@ public class Opportunity {
         this.summary = summary;
         this.type = type;
         this.thematicAreas = thematicAreas != null ? thematicAreas : new HashSet<>();
-        this.targetAudiences = targetAudiences != null ? targetAudiences : new HashSet<>();
+        this.targetCourseAudiences = targetCourseAudiences != null ? targetCourseAudiences : new HashSet<>();
         this.modality = modality;
         this.startDate = startDate;
         this.endDate = endDate;

@@ -22,6 +22,11 @@ public class UfpeCollector extends HtmlCollector {
     }
 
     @Override
+    protected String imageFallBackUrl() {
+        return "https://imgs.search.brave.com/EIGE7DslzLVogBhwkZrF1MvSE5V4PGePlzzSx0VojcA/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly9pbWFn/ZXMuc2Vla2xvZ28u/Y29tL2xvZ28tcG5n/LzM4LzEvdW5pdmVy/c2lkYWRlLWZlZGVy/YWwtZGUtcGVybmFt/YnVjby11ZnBlLWxv/Z28tcG5nX3NlZWts/b2dvLTM4NDg2NC5w/bmc";
+    }
+
+    @Override
     protected String pageUrl() {
         return NEWS_URL;
     }

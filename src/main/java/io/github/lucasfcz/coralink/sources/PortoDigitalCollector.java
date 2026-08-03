@@ -22,6 +22,11 @@ public class PortoDigitalCollector extends HtmlCollector {
     }
 
     @Override
+    protected String imageFallBackUrl() {
+        return "https://imgs.search.brave.com/pDEX8i6TSfIuG26w8s6S8QjJllO_kqsKEUzz7MLnhd4/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly93d3cu/cG9ydG9kaWdpdGFs/Lm9yZy9fbnV4dC9p/bWcvbG9nby41NDE3/ZDljLnN2Zw";
+    }
+
+    @Override
     protected String pageUrl() {
         return NEWS_URL;
     }
@@ -66,19 +71,5 @@ public class PortoDigitalCollector extends HtmlCollector {
         Element container = link.closest("article, li, .card, [class*=card], [class*=news], [class*=noticia]");
 
         return container != null ? container : link.parent();
-    }
-
-    private String extractSummary(Element container, String fallback) {
-        if (container == null) {
-            return fallback;
-        }
-
-        Element description = container.selectFirst("p, .description, .summary, .excerpt");
-
-        if (description == null || description.text().isBlank()) {
-            return fallback;
-        }
-
-        return description.text().trim();
     }
 }

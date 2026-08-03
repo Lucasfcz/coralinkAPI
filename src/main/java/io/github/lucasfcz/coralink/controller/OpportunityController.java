@@ -22,11 +22,11 @@ public class OpportunityController {
     public ResponseEntity<Page<OpportunityResponse>> getOpportunities(
             @RequestParam(required = false) OpportunityType type,
             @RequestParam(required = false) Set<ThematicArea> thematicArea,
-            @RequestParam(required = false) Set<TargetAudience> targetAudience,
+            @RequestParam(required = false) Set<TargetCourseAudience> targetCourseAudience,
             @RequestParam(required = false) Modality modality,
             @RequestParam(required = false) Boolean isFree,
             Pageable pageable) {
-        return ResponseEntity.ok(opportunityService.getRelevantOpportunities(type, thematicArea, targetAudience, modality, isFree, pageable));
+        return ResponseEntity.ok(opportunityService.getRelevantOpportunities(type, thematicArea, targetCourseAudience, modality, isFree, pageable));
 
     }
 

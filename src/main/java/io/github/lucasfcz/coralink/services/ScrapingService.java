@@ -21,7 +21,7 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class ScrapingService {
+public class  ScrapingService {
 
     private final List<Collector> collectors;
     private final RawOpportunityRepository rawOpportunityRepository;

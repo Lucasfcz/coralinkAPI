@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.lucasfcz.coralink.dto.DetailedContent;
 import io.github.lucasfcz.coralink.dto.NewsSummary;
+import io.github.lucasfcz.coralink.exceptions.BadResponseException;
 import io.github.lucasfcz.coralink.exceptions.CollectException;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Jsoup;
@@ -97,6 +98,8 @@ public abstract class WordPressCollector extends AbstractCollector {
 
     @Override
     public DetailedContent detailedCollect(String url) {
+        try {
+
 
         Document document = requestDocument(url);
 
@@ -107,29 +110,14 @@ public abstract class WordPressCollector extends AbstractCollector {
                         "main article," +
                         "main"
         );
+        if(content != null) {
+            String text = extractSummary(content, document.title());
 
-        String text = content == null ? "" : content.text();
-
-        return new DetailedContent(text, extractImage(document, content));
-    }
-
-    protected String extractImage(Document document, Element content) {
-
-        Element og = document.selectFirst("meta[property=og:image]");
-
-        if (og != null) {
-            return og.attr("content");
+            return new DetailedContent(text, extractImage(document, content));
         }
-
-        if (content != null) {
-
-            Element image = content.selectFirst("img");
-
-            if (image != null) {
-                return image.absUrl("src");
-            }
+        } catch (Exception e) {
+            throw new CollectException("Failed to collect detailed content for URL: " + url, e);
         }
-
         return null;
     }
 }

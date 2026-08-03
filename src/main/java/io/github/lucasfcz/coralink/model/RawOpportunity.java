@@ -37,12 +37,6 @@ public class RawOpportunity {
     // result of AI screening, null until screening occurs
     private Boolean screenedRelevant;
 
-    @Enumerated(EnumType.STRING)
-    private OpportunityType probableType;
-
-    @Column(columnDefinition = "TEXT")
-    private String screeningReasoning;
-
     @Column(nullable = false)
     private Boolean becameOpportunity; // became an Opportunity after phase 2?
 
@@ -59,15 +53,11 @@ public class RawOpportunity {
         this.newsUrl = newsUrl;
         this.sourceName = sourceName;
         this.screenedRelevant = screenedRelevant;
-        this.probableType = probableType;
-        this.screeningReasoning = screeningReasoning;
         this.becameOpportunity = becameOpportunity;
     }
 
-    public void applyScreening(boolean relevant, OpportunityType type, String reasoning) {
+    public void applyScreening(boolean relevant) {
         this.screenedRelevant = relevant;
-        this.probableType = type;
-        this.screeningReasoning = reasoning;
     }
 
     public void markAsOpportunity() {

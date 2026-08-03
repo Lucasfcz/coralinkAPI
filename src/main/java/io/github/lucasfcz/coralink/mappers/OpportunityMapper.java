@@ -14,7 +14,7 @@ public class OpportunityMapper {
                 .summary(result.summary())
                 .type(result.type())
                 .thematicAreas(result.thematicAreas())
-                .targetAudiences(result.targetAudiences())
+                .targetCourseAudiences(result.targetCourseAudiences())
                 .modality(result.modality())
                 .startDate(result.startDate())
                 .endDate(result.endDate())
@@ -34,7 +34,7 @@ public class OpportunityMapper {
                 op.getSummary(),
                 op.getType(),
                 op.getThematicAreas(),
-                op.getTargetAudiences(),
+                op.getTargetCourseAudiences(),
                 op.getModality(),
                 op.getStartDate(),
                 op.getEndDate(),

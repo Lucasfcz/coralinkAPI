@@ -22,7 +22,7 @@ class AiClientTest {
     void validatesThatTheAiReturnsExactlyOneResultForEveryOpportunity() throws Exception {
         RawOpportunity opportunity = rawOpportunity(42L);
         AiClient ai = fixedResponse(
-                new ScreeningBatchResult(List.of(new ScreeningResult(42L, true, OpportunityType.WORKSHOP, "É um workshop."))));
+                new ScreeningBatchResult(List.of(new ScreeningResult(42L, true))));
         ScreeningService service = new ScreeningService(ai);
 
         ScreeningBatchResult result = service.screen(List.of(opportunity));

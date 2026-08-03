@@ -1,9 +1,6 @@
 package io.github.lucasfcz.coralink.specifications;
 
-import io.github.lucasfcz.coralink.enums.Modality;
-import io.github.lucasfcz.coralink.enums.OpportunityType;
-import io.github.lucasfcz.coralink.enums.TargetAudience;
-import io.github.lucasfcz.coralink.enums.ThematicArea;
+import io.github.lucasfcz.coralink.enums.*;
 import io.github.lucasfcz.coralink.model.Opportunity;
 import org.springframework.data.jpa.domain.Specification;
 
@@ -15,7 +12,7 @@ public class OpportunitySpecifications {
     public static Specification<Opportunity> filters(
             OpportunityType type,
             Set<ThematicArea> thematicAreas,
-            Set<TargetAudience> targetAudiences,
+            Set<TargetCourseAudience> targetCourseAudiences,
             Modality modality,
             Boolean isFree) {
 
@@ -23,7 +20,7 @@ public class OpportunitySpecifications {
                 .where(isUpcomingOrOngoing())
                 .and(hasType(type))
                 .and(hasThematicAreas(thematicAreas))
-                .and(hasTargetAudiences(targetAudiences))
+                .and(hasTargetAudiences(targetCourseAudiences))
                 .and(hasModality(modality))
                 .and(hasIsFree(isFree));
     }
@@ -31,8 +28,8 @@ public class OpportunitySpecifications {
     //this get only relevant opportunities, which are the ones that are upcoming or ongoing
     private static Specification<Opportunity> isUpcomingOrOngoing() {
         return (root, query, cb) -> cb.or(
-                cb.isNull(root.get("eventDate")),
-                cb.greaterThanOrEqualTo(root.get("eventDate"), LocalDate.now())
+                cb.isNull(root.get("startDate")),
+                cb.greaterThanOrEqualTo(root.get("startDate"), LocalDate.now())
         );
     }
 
@@ -52,7 +49,7 @@ public class OpportunitySpecifications {
         };
     }
 
-    private static Specification<Opportunity> hasTargetAudiences(Set<TargetAudience> audiences) {
+    private static Specification<Opportunity> hasTargetAudiences(Set<TargetCourseAudience> audiences) {
         return (root, query, cb) -> {
             if (audiences == null || audiences.isEmpty()) {
                 return null;

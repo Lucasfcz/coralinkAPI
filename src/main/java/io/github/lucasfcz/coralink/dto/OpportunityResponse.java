@@ -10,7 +10,7 @@ public record OpportunityResponse(
         String summary,
         OpportunityType type,
         Set<ThematicArea> thematicAreas,
-        Set<TargetAudience> targetAudiences,
+        Set<TargetCourseAudience> targetCourseAudiences,
         Modality modality,
         LocalDate startDate,
         LocalDate endDate,

@@ -12,6 +12,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -31,14 +33,29 @@ public class PipelineService {
     private final List<Collector> collectors;
 
     public PipelineRunResult runFullPipeline() {
+        Instant start = Instant.now();
+        log.info("Pipeline started");
+
         int collected = scrapingService.collectAllNewOpportunitiesAndReturnQuantityCollected();
         PhaseResult screening = runScreeningPhase();
         PhaseResult extraction = runExtractionPhase();
 
-        return new PipelineRunResult(collected, screening.relevantFound(), extraction.relevantFound(),
+        PipelineRunResult result = new PipelineRunResult(collected, screening.relevantFound(), extraction.relevantFound(),
                 screening.irrelevantFound() + extraction.irrelevantFound());
+
+        Duration duration = Duration.between(start, Instant.now());
+        log.info("Pipeline finished in {} — collected={}, screeningRelevant={}, extractionRelevant={}, failures={}",
+                formatDuration(duration), collected, screening.relevantFound(), extraction.relevantFound(),
+                screening.irrelevantFound() + extraction.irrelevantFound());
+
+        return result;
     }
 
+    private String formatDuration(Duration duration) {
+        long minutes = duration.toMinutes();
+        long seconds = duration.minusMinutes(minutes).getSeconds();
+        return "%dm%02ds".formatted(minutes, seconds);
+    }
     private PhaseResult runScreeningPhase() {
         List<RawOpportunity> rawOpportunities = rawOpportunityRepository.findByScreenedRelevantIsNull();
         if (rawOpportunities.isEmpty()) return PhaseResult.empty();
