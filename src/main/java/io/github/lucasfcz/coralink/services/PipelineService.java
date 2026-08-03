@@ -10,6 +10,7 @@ import io.github.lucasfcz.coralink.repositories.RawOpportunityRepository;
 import io.github.lucasfcz.coralink.sources.collector.Collector;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
@@ -32,6 +33,7 @@ public class PipelineService {
     private final PipelinePersistenceService persistenceService;
     private final List<Collector> collectors;
 
+    @CacheEvict(value = "opportunities")
     public PipelineRunResult runFullPipeline() {
         Instant start = Instant.now();
         log.info("Pipeline started");

@@ -12,6 +12,8 @@ import org.springframework.stereotype.Service;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Set;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -78,12 +80,20 @@ public class  ScrapingService {
     private List<NewsSummary> collectFromAllSources() {
         return collectors.stream()
                 .flatMap(collector -> {
-                    List<NewsSummary> collected = collector.collect();
+                    Instant start = Instant.now();
+                    List<NewsSummary> collected;
+                    try {
+                        collected = collector.collect();
+                    } catch (RuntimeException exception) {
+                        log.error("Collector {} failed", collector.sourceName(), exception);
+                        return List.<NewsSummary>of().stream();
+                    }
 
                     log.info(
-                            "Collector {} returned {} summaries",
+                            "Collector {} returned {} summaries in {} ms",
                             collector.sourceName(),
-                            collected.size()
+                            collected.size(),
+                            Duration.between(start, Instant.now()).toMillis()
                     );
 
                     return collected.stream();

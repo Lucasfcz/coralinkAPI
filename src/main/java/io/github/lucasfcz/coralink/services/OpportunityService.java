@@ -6,6 +6,7 @@ import io.github.lucasfcz.coralink.mappers.OpportunityMapper;
 import io.github.lucasfcz.coralink.repositories.OpportunityRepository;
 import io.github.lucasfcz.coralink.specifications.OpportunitySpecifications;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -21,6 +22,7 @@ public class OpportunityService {
     private final OpportunityMapper opportunityMapper;
 
     // only get relevant opportunities that are upcoming or ongoing, and apply filters if provided
+    @Cacheable(value = "opportunities", key = "{#type, #thematicAreas, #targetCourseAudiences, #modality, #isFree, #pageable}")
     public Page<OpportunityResponse> getRelevantOpportunities(
             OpportunityType type,
             Set<ThematicArea> thematicAreas,
@@ -44,6 +46,7 @@ public class OpportunityService {
                 .orElse(null);
     }
 
+    @Cacheable(value = "opportunities")
     public int howManyOpportunitiesAreUpcoming() {
         return opportunityRepository.countAllByStartDateAfter(LocalDate.now());
     }

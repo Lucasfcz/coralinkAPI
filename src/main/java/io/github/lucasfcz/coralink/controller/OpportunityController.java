@@ -30,8 +30,8 @@ public class OpportunityController {
 
     }
 
-    @GetMapping("/{title}")
-    public ResponseEntity<Page<OpportunityResponse>> findOpportunityById(@PathVariable String title, Pageable pageable) {
+    @GetMapping("/search/{title}")
+    public ResponseEntity<Page<OpportunityResponse>> findOpportunityByTitle(@PathVariable @RequestParam String title, Pageable pageable) {
         return ResponseEntity.ok(opportunityService.getOpportunitiesByTitle(title, pageable));
     }
 

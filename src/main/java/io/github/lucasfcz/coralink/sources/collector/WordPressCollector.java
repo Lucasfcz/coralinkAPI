@@ -49,6 +49,9 @@ public abstract class WordPressCollector extends AbstractCollector {
                     .body();
 
             JsonNode posts = OBJECT_MAPPER.readTree(json);
+            if (!posts.isArray()) {
+                throw new BadResponseException("WordPress posts endpoint did not return a JSON array: " + endpoint);
+            }
 
             List<NewsSummary> result = new ArrayList<>();
 

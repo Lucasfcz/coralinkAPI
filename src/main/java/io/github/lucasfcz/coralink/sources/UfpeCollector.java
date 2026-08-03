@@ -8,7 +8,11 @@ import org.jsoup.nodes.Element;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Component
 public class UfpeCollector extends HtmlCollector {
@@ -33,36 +37,31 @@ public class UfpeCollector extends HtmlCollector {
 
     @Override
     protected List<Element> articles(Document document) {
-
-        return document.select("article")
+        return new ArrayList<>(document.select("h3 a[href*='/ascom/noticias/-/asset_publisher/'], h4 a[href*='/ascom/noticias/-/asset_publisher/']")
                 .stream()
-                .filter(article ->
-                        article.selectFirst("h2 a, h3 a, h4 a, a[href*='/ascom/noticias/']") != null
-                )
-                .toList();
+                .filter(link -> !link.text().isBlank())
+                .collect(Collectors.toMap(
+                        link -> link.absUrl("href"),
+                        Function.identity(),
+                        (first, ignored) -> first,
+                        LinkedHashMap::new
+                ))
+                .values());
     }
 
     @Override
-    protected NewsSummary mapArticle(Element article) {
-
-        Element titleLink = article.selectFirst(
-                "h2 a, h3 a, h4 a, a[href*='/ascom/noticias/']"
-        );
-
-        if (titleLink == null) {
-            return null;
-        }
-
-        String title = titleLink.text().trim();
-        String url = titleLink.absUrl("href");
+    protected NewsSummary mapArticle(Element articleLink) {
+        String title = articleLink.text().trim();
+        String url = articleLink.absUrl("href");
 
         if (title.isBlank() || url.isBlank()) {
             return null;
         }
 
-        Element summaryElement = article.selectFirst(
-                ".asset-summary, .description, .summary, p"
-        );
+        Element summaryContainer = articleLink.closest(".asset-abstract, .asset-content, li, .card, [class*=asset]");
+        Element summaryElement = summaryContainer == null
+                ? null
+                : summaryContainer.selectFirst(".asset-summary, .description, .summary, p");
 
         String summary = summaryElement == null
                 ? title

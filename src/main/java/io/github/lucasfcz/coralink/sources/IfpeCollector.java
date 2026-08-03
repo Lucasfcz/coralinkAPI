@@ -30,8 +30,8 @@ public class IfpeCollector extends WordPressCollector {
     public List<NewsSummary> collect() {
         List<NewsSummary> result = new ArrayList<>();
 
-        for (String campus : CAMPUS) {
-            String endpoint = BASE_URL + "/" + campus + "/wp-json/wp/v2/posts?per_page=20&_embed=wp:featuredmedia";
+        for (String campus : campusPaths()) {
+            String endpoint = endpointForCampus(campus);
             try {
                 result.addAll(fetchPosts(endpoint));
             } catch (Exception exception) {
@@ -39,6 +39,14 @@ public class IfpeCollector extends WordPressCollector {
             }
         }
         return result;
+    }
+
+    protected List<String> campusPaths() {
+        return CAMPUS;
+    }
+
+    protected String endpointForCampus(String campus) {
+        return baseUrl() + "/" + campus + "/wp-json/wp/v2/posts?per_page=20&_embed=wp:featuredmedia";
     }
 
     @Override
