@@ -114,8 +114,13 @@ public class ExtractionService {
         }
 
         if (!failedIds.isEmpty()) {
-            log.error("Unable to extract {} opportunities after {} attempts each. Ids: {}",
-                    failedIds.size(), MAX_RETRIES_PER_ITEM, failedIds);
+            log.error("Unable to extract {} opportunities after {} attempts each. Ids: {}", failedIds.size(), MAX_RETRIES_PER_ITEM, failedIds);
+            for (Long id : failedIds) {
+                rawOpportunities.stream()
+                        .filter(o -> Objects.equals(o.getId(), id))
+                        .findFirst()
+                        .ifPresent(RawOpportunity::setIsInvalid);
+            }
         }
 
         return new ExtractionBatchResult(results);
@@ -150,7 +155,7 @@ public class ExtractionService {
             return;
         }
         try {
-            Thread.sleep(5000);
+            Thread.sleep(20000);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new AiCallException("Interrupted while waiting between AI requests", e);

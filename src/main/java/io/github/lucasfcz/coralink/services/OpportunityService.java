@@ -2,6 +2,7 @@ package io.github.lucasfcz.coralink.services;
 
 import io.github.lucasfcz.coralink.dto.OpportunityResponse;
 import io.github.lucasfcz.coralink.enums.*;
+import io.github.lucasfcz.coralink.exceptions.NotFoundException;
 import io.github.lucasfcz.coralink.mappers.OpportunityMapper;
 import io.github.lucasfcz.coralink.repositories.OpportunityRepository;
 import io.github.lucasfcz.coralink.specifications.OpportunitySpecifications;
@@ -43,7 +44,7 @@ public class OpportunityService {
     public OpportunityResponse getOpportunityById(Long id) {
         return opportunityRepository.findById(id)
                 .map(opportunityMapper::toResponse)
-                .orElse(null);
+                .orElseThrow(() -> new NotFoundException("Not found opportunity if id: " + id));
     }
 
     @Cacheable(value = "opportunities")

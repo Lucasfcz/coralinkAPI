@@ -41,8 +41,9 @@ public abstract class AbstractCollector implements Collector {
         }
     }
 
-    protected String extractSummary(Element content, String title) {
-        content.select(
+    protected String extractSummary(Element content) {
+        Element working = content.clone();
+        working.select(
                 "header," +
                         "footer," +
                         "nav," +
@@ -60,7 +61,7 @@ public abstract class AbstractCollector implements Collector {
                         ".comments"
         ).remove();
 
-        return content.text();
+        return working.text();
     }
 
     protected String extractImage(Document document, Element content) {

@@ -42,7 +42,7 @@ public class UpeCollector extends WordPressCollector {
     }
 
     protected String fallbackPostsEndpoint() {
-        return "http://upe.br/wp-json/wp/v2/posts?per_page=20&_embed=wp:featuredmedia";
+        return "https://upe.br/wp-json/wp/v2/posts?per_page=20&_embed=wp:featuredmedia";
     }
 
     @Override

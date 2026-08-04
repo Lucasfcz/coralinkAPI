@@ -37,6 +37,8 @@ public class RawOpportunity {
     // result of AI screening, null until screening occurs
     private Boolean screenedRelevant;
 
+    private Boolean isInvalid;
+
     @Column(nullable = false)
     private Boolean becameOpportunity; // became an Opportunity after phase 2?
 
@@ -46,13 +48,13 @@ public class RawOpportunity {
 
     @Builder
     private RawOpportunity(String title, String shortSummary, String newsUrl, SourceName sourceName,
-                           Boolean screenedRelevant, OpportunityType probableType,
-                           String screeningReasoning, Boolean becameOpportunity) {
+                           Boolean screenedRelevant, Boolean isInvalid, Boolean becameOpportunity) {
         this.title = title;
         this.shortSummary = shortSummary;
         this.newsUrl = newsUrl;
         this.sourceName = sourceName;
         this.screenedRelevant = screenedRelevant;
+        this.isInvalid = isInvalid;
         this.becameOpportunity = becameOpportunity;
     }
 
@@ -62,5 +64,9 @@ public class RawOpportunity {
 
     public void markAsOpportunity() {
         this.becameOpportunity = true;
+    }
+
+    public void setIsInvalid() {
+        this.isInvalid = true;
     }
 }

@@ -51,7 +51,7 @@ public abstract class HtmlCollector extends AbstractCollector {
                             "main"
             );
             if (content != null) {
-                String text = extractSummary(content, document.title());
+                String text = extractSummary(content);
                 return new DetailedContent(text, extractImage(document, content));
             }
         }

@@ -57,7 +57,7 @@ public class PortoDigitalCollector extends HtmlCollector {
 
         Element container = findRelevantContainer(articleLink);
 
-        String summary = extractSummary(container, title);
+        String summary = extractSummary(container);
 
         return new NewsSummary(title, summary, url, sourceName(), LocalDateTime.now());
     }

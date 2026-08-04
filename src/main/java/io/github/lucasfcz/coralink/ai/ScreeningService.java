@@ -106,6 +106,12 @@ public class ScreeningService {
         if (!pending.isEmpty()) {
             List<Long> failedIds = pending.stream().map(RawOpportunity::getId).toList();
             log.error("Unable to obtain valid screening after " + MAX_RETRIES + " attempts for raw opportunity ids: {}", failedIds);
+            for (Long id : failedIds) {
+                pending.stream()
+                        .filter(o -> Objects.equals(o.getId(), id))
+                        .findFirst()
+                        .ifPresent(RawOpportunity::setIsInvalid);
+            }
         }
 
         List<ScreeningResult> finalResults = rawOpportunityList.stream()
@@ -129,7 +135,7 @@ public class ScreeningService {
             return;
         }
         try {
-            Thread.sleep(5000);
+            Thread.sleep(20000);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new AiCallException("Interrupted while waiting between AI batch requests", e);

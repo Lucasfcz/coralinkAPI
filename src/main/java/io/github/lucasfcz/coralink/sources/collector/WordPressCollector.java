@@ -38,9 +38,7 @@ public abstract class WordPressCollector extends AbstractCollector {
     }
 
     protected List<NewsSummary> fetchPosts(String endpoint) {
-
         try {
-
             String json = Jsoup.connect(endpoint)
                     .ignoreContentType(true)
                     .timeout(TIMEOUT_MILLIS)
@@ -114,7 +112,7 @@ public abstract class WordPressCollector extends AbstractCollector {
                         "main"
         );
         if(content != null) {
-            String text = extractSummary(content, document.title());
+            String text = extractSummary(content);
 
             return new DetailedContent(text, extractImage(document, content));
         }

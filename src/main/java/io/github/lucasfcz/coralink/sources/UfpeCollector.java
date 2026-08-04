@@ -37,7 +37,8 @@ public class UfpeCollector extends HtmlCollector {
 
     @Override
     protected List<Element> articles(Document document) {
-        return new ArrayList<>(document.select("h3 a[href*='/ascom/noticias/-/asset_publisher/'], h4 a[href*='/ascom/noticias/-/asset_publisher/']")
+        return new ArrayList<>(document.select(
+                        "h3.list-full-content__title a[href*='/ascom/noticias/-/asset_publisher/']")
                 .stream()
                 .filter(link -> !link.text().isBlank())
                 .collect(Collectors.toMap(
@@ -53,16 +54,14 @@ public class UfpeCollector extends HtmlCollector {
     protected NewsSummary mapArticle(Element articleLink) {
         String title = articleLink.text().trim();
         String url = articleLink.absUrl("href");
-
         if (title.isBlank() || url.isBlank()) {
             return null;
         }
 
-        Element summaryContainer = articleLink.closest(".asset-abstract, .asset-content, li, .card, [class*=asset]");
-        Element summaryElement = summaryContainer == null
+        Element contentContainer = articleLink.closest(".list-full-content__content");
+        Element summaryElement = contentContainer == null
                 ? null
-                : summaryContainer.selectFirst(".asset-summary, .description, .summary, p");
-
+                : contentContainer.selectFirst(".list-full-content__sumary");
         String summary = summaryElement == null
                 ? title
                 : summaryElement.text().trim();
