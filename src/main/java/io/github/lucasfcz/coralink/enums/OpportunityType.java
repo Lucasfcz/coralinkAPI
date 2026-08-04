@@ -1,21 +1,32 @@
 package io.github.lucasfcz.coralink.enums;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonEnumDefaultValue;
+
 public enum OpportunityType {
     EVENT,
     HACKATHON,
     EDITAL,
+    ARTICLE,
     BOOTCAMP,
     CERTIFICATION,
     COURSE,
-    TRAINEE_PROGRAM,
     INTERNSHIP_PROGRAM,
     SCHOLARSHIP,
-    JOB_OPENING,
+    JOB,
     COMPETITION,
     LECTURE,
     NETWORKING,
     WORKSHOP,
     MEETUP,
-    OPEN_SOURCE,
-    OTHER
+    OTHER;
+
+    @JsonCreator
+    public static OpportunityType fromValue(String value) {
+        try {
+            return OpportunityType.valueOf(value.toUpperCase());
+        } catch (Exception e) {
+            return OTHER;
+        }
+    }
 }

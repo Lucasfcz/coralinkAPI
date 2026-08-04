@@ -1,128 +1,193 @@
 package io.github.lucasfcz.coralink.ai;
 
 import io.github.lucasfcz.coralink.dto.ScreeningBatchResult;
+import io.github.lucasfcz.coralink.dto.ScreeningResult;
+import io.github.lucasfcz.coralink.exceptions.AiCallException;
+import io.github.lucasfcz.coralink.exceptions.BadResponseException;
 import io.github.lucasfcz.coralink.model.RawOpportunity;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import java.io.IOException;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
-
-// this class is responsible for AI first call to know if the opportunity is relevant for universitaries/students
-// and what is your probably type, for least the AI sends her justify for results
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ScreeningService {
 
-    private final GroqClient groqClient;
+    private final AiClient aiClient;
 
-    // prompt for first screening of opportunities, to classify them as relevant or not and to determine their probably type
-    private static final String systemPrompt = "Você é um classificador especializado de oportunidades de tecnologia para estudantes de Recife e Região Metropolitana.\n" +
-            "\n" +
-            "Sua função é analisar um conteúdo e decidir se ele representa uma oportunidade relevante para estudantes de tecnologia.\n" +
-            "\n" +
-            "## Público-alvo\n" +
-            "\n" +
-            "Considere prioritariamente estudantes de:\n" +
-            "\n" +
-            "- ADS\n" +
-            "- Ciência da Computação\n" +
-            "- Sistemas de Informação\n" +
-            "- Engenharia de Software\n" +
-            "- Engenharia da Computação\n" +
-            "- áreas correlatas\n" +
-            "- iniciantes em programação\n" +
-            "\n" +
-            "## Critérios de relevância\n" +
-            "\n" +
-            "Considere relevante quando o conteúdo envolver educação, carreira ou tecnologia, como:\n" +
-            "\n" +
-            "- programação\n" +
-            "- desenvolvimento web\n" +
-            "- desenvolvimento mobile\n" +
-            "- backend\n" +
-            "- frontend\n" +
-            "- IA\n" +
-            "- ciência de dados\n" +
-            "- banco de dados\n" +
-            "- cloud\n" +
-            "- DevOps\n" +
-            "- segurança\n" +
-            "- UX/UI\n" +
-            "- software livre\n" +
-            "- engenharia de software\n" +
-            "- inovação\n" +
-            "- empreendedorismo em tecnologia\n" +
-            "\n" +
-            "Escolha o tipo mais específico possível.\n" +
-            "\n" +
-            "Exemplos:\n" +
-            "\n" +
-            "- \"Workshop de Spring Boot\" → WORKSHOP\n" +
-            "- \"Hackathon Porto Digital\" → HACKATHON\n" +
-            "- \"Programa de estágio da Accenture\" → INTERNSHIP_PROGRAM\n" +
-            "- \"Vaga para Desenvolvedor Java\" → JOB_OPENING\n" +
-            "- \"Bootcamp Santander + DIO\" → BOOTCAMP\n" +
-            "- \"Google Summer of Code\" → OPEN_SOURCE\n" +
-            "- \"AWS Cloud Practitioner gratuito\" → CERTIFICATION\n" +
-            "- \"Meetup do GDG Recife\" → MEETUP\n" +
-            "- \"Campus Party\" → EVENT\n" +
-            "- \"Edital FACEPE\" → EDITAL\n" +
-            "\n" +
-            "Utilize EVENT apenas quando houver um evento tecnológico relevante que não possa ser classificado em uma categoria mais específica.\n" +
-            "\n" +
-            "Utilize OTHER somente quando o conteúdo for relevante para estudantes de tecnologia, mas não se encaixar em nenhuma das categorias acima.\n" +
-            "\n" +
-            "## Critérios negativos\n" +
-            "\n" +
-            "Classifique como não relevante quando o conteúdo tratar apenas de:\n" +
-            "\n" +
-            "- assuntos que não são considerados oportunidades para o universitario em geral\n" +
-            "- assuntos que nao podem ser considerados oportunidades para universitarios, exemplo: Henrique Foncerca vence hackthoon..., essa noticia não pode ser considerada uma oportunidade pois não é algo que o universita pode se beneficiar diretamente.\n" +
-            "- noticias com datas passadas\n" +
-            "- política\n" +
-            "- entretenimento\n" +
-            "- esportes\n" +
-            "- promoções comerciais\n" +
-            "- notícias gerais\n" +
-            "- assuntos sem relação com tecnologia, educação ou carreira.\n" +
-            "\n" +
-            "Nunca invente informações. Baseie toda a classificação apenas no conteúdo fornecido."
-            +
-            "## Formato de entrada e saída\n" +
-            "\n" +
-            "Você receberá uma lista de oportunidades, cada uma identificada por um \"RawOpportunityId\" único.\n" +
-            "\n" +
-            "Para cada oportunidade recebida, gere um resultado de classificação separado, incluindo o mesmo \"RawOpportunityId\" no campo correspondente da resposta, dentro da lista \"results\".\n" +
-            "\n" +
-            "Nunca omita nenhuma oportunidade recebida. Retorne exatamente um resultado para cada RawOpportunityId enviado.";
+    private static final int MAX_RETRIES = 3;
 
-    public ScreeningBatchResult screen(List<RawOpportunity> rawOpportunity) {
+    private static final String SYSTEM_PROMPT = """
+            Você é um classificador especializado de oportunidades de tecnologia para estudantes de Recife e Região Metropolitana.
 
-        String opportunitiesBlock = rawOpportunity.stream()
+            Sua função é analisar um conteúdo e decidir se ele representa uma oportunidade relevante para estudantes de tecnologia.
+
+            ## Critérios de relevância
+
+            Considere relevante APENAS quando o conteúdo divulgar uma oportunidade na qual um estudante possa participar.
+
+            ## Exemplos
+
+            - hackathons
+            - eventos
+            - workshops
+            - meetups
+            - palestras
+            - bootcamps
+            - cursos
+            - minicursos
+            - editais
+            - bolsas
+            - programas de estágio
+            - vagas
+            - competições
+            - programas de aceleração
+            - programas de incubação
+            - inscrições abertas
+            - chamadas públicas
+            
+            ## Critérios negativos
+
+            Classifique como não relevante quando o conteúdo tratar apenas de:
+            
+            - sao noticias que o universitario nao possa participar
+            - assuntos que não são considerados oportunidades para o universitario em geral
+            - assuntos que nao podem ser considerados oportunidades para universitarios, exemplo: Henrique Foncerca vence hackthoon..., essa noticia não pode ser considerada uma oportunidade pois não é algo que o universita pode se beneficiar diretamente.
+            - noticias com datas passadas
+            - política
+            - entretenimento
+            - esportes
+            - promoções comerciais
+            - notícias gerais
+            - assuntos sem relação com tecnologia, educação ou carreira.
+
+            Nunca invente informações. Baseie toda a classificação apenas no conteúdo fornecido.
+            ## Formato de entrada e saída
+
+            Você receberá uma lista de oportunidades, cada uma identificada por um "RawOpportunityId" único.
+
+            Retorne APENAS um JSON compatível com o formato do exemplo a seguir: {"screeningResults":[{"rawOpportunityId":1,"isRelevant":true"}]}.
+            Para cada oportunidade recebida, gere um resultado de classificação separado, incluindo o mesmo "rawOpportunityId" dentro da lista "screeningResults".
+
+            Nunca omita nenhuma oportunidade recebida. Retorne exatamente um resultado para cada RawOpportunityId enviado.""";
+
+    private boolean firstRequestSent = false;
+
+    public ScreeningBatchResult screen(List<RawOpportunity> rawOpportunityList) {
+        if (rawOpportunityList == null || rawOpportunityList.isEmpty()) {
+            throw new BadResponseException("At least one raw opportunity is required for screening");
+        }
+
+        Map<Long, ScreeningResult> resolved = new LinkedHashMap<>();
+        List<RawOpportunity> pending = rawOpportunityList;
+        firstRequestSent = false;
+
+        for (int attempt = 1; attempt <= MAX_RETRIES && !pending.isEmpty(); attempt++) {
+            for (List<RawOpportunity> batch : partition(pending)) {
+                awaitRateLimit();
+
+                ScreeningBatchResult response = sendScreeningRequest(batch);
+                List<ScreeningResult> invalid = getScreenInvalidResults(response);
+
+                response.screeningResults().stream()
+                        .filter(r -> r != null && r.rawOpportunityId() != null && !invalid.contains(r))
+                        .forEach(r -> resolved.put(r.rawOpportunityId(), r));
+            }
+
+            pending = pending.stream()
+                    .filter(o -> !resolved.containsKey(o.getId()))
+                    .toList();
+        }
+
+        if (!pending.isEmpty()) {
+            List<Long> failedIds = pending.stream().map(RawOpportunity::getId).toList();
+            log.error("Unable to obtain valid screening after " + MAX_RETRIES + " attempts for raw opportunity ids: {}", failedIds);
+            for (Long id : failedIds) {
+                pending.stream()
+                        .filter(o -> Objects.equals(o.getId(), id))
+                        .findFirst()
+                        .ifPresent(RawOpportunity::setIsInvalid);
+            }
+        }
+
+        List<ScreeningResult> finalResults = rawOpportunityList.stream()
+                .map(o -> resolved.get(o.getId()))
+                .toList();
+
+        return new ScreeningBatchResult(finalResults);
+    }
+
+    private List<List<RawOpportunity>> partition(List<RawOpportunity> rawOpportunities) {
+        List<List<RawOpportunity>> batches = new ArrayList<>();
+        for (int i = 0; i < rawOpportunities.size(); i += 10) {
+            batches.add(rawOpportunities.subList(i, Math.min(i + 10, rawOpportunities.size())));
+        }
+        return batches;
+    }
+
+    private void awaitRateLimit() {
+        if (!firstRequestSent) {
+            firstRequestSent = true;
+            return;
+        }
+        try {
+            Thread.sleep(20000);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new AiCallException("Interrupted while waiting between AI batch requests", e);
+        }
+    }
+
+    private ScreeningBatchResult sendScreeningRequest(List<RawOpportunity> rawOpportunities) {
+        String opportunitiesBlock = rawOpportunities.stream()
                 .map(this::formatRawOpportunity)
                 .collect(Collectors.joining("\n\n"));
 
         String userPrompt = """
                 Analise as seguintes oportunidades
-                e classifique cada uma delas. %s
-           """.formatted(opportunitiesBlock);
+                e classifique cada uma delas.
 
-        return groqClient.sendPrompt(
-                systemPrompt,
+                %s
+                """.formatted(opportunitiesBlock);
+
+        log.info("Prompt chars: {}", userPrompt.length());
+        log.info("quantity of opportunities: {}", rawOpportunities.size());
+
+        ScreeningBatchResult result = aiClient.sendPrompt(
+                SYSTEM_PROMPT,
                 userPrompt,
-                ScreeningBatchResult.class);
+                ScreeningBatchResult.class
+        );
+
+        if (result == null || result.screeningResults() == null) {
+            throw new AiCallException("AI returned no screening results");
+        }
+
+        return result;
+    }
+
+    private List<ScreeningResult> getScreenInvalidResults(ScreeningBatchResult result) {
+        List<ScreeningResult> results = result.screeningResults();
+
+        return results.stream()
+                .filter(r -> r == null
+                        || r.rawOpportunityId() == null
+                        || r.isRelevant() == null
+                        || results.stream().anyMatch(other -> other != r
+                        && Objects.equals(other.rawOpportunityId(), r.rawOpportunityId())))
+                .toList();
     }
 
     private String formatRawOpportunity(RawOpportunity rawOpportunity) {
         return """
-            RawOpportunityId: %d
-            Título: %s
-            Resumo: %s
-            """.formatted(
+                RawOpportunityId: %d
+                Título: %s
+                Resumo: %s
+                """.formatted(
                 rawOpportunity.getId(),
                 rawOpportunity.getTitle(),
                 rawOpportunity.getShortSummary()

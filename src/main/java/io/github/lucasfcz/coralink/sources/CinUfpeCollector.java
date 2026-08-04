@@ -1,89 +1,31 @@
 package io.github.lucasfcz.coralink.sources;
 
-import io.github.lucasfcz.coralink.dto.DetailedContent;
-import io.github.lucasfcz.coralink.dto.ExtrationResult;
-import io.github.lucasfcz.coralink.dto.NewsSummary;
 import io.github.lucasfcz.coralink.enums.SourceName;
-import io.github.lucasfcz.coralink.exceptions.CollectException;
-import org.jsoup.Jsoup;
-import org.jsoup.nodes.Document;
-import org.jsoup.nodes.Element;
-import org.jsoup.select.Elements;
+import io.github.lucasfcz.coralink.sources.collector.WordPressCollector;
 import org.springframework.stereotype.Component;
 
-import java.io.IOException;
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Objects;
-
 @Component
-public class CinUfpeCollector implements Collector {
+public class CinUfpeCollector extends WordPressCollector {
 
-    private static final String URL = "https://portal.cin.ufpe.br/category/noticia/";
+    private static final String BASE_URL = "https://portal.cin.ufpe.br";
 
     @Override
-    public List<NewsSummary> collect() {
-        try {
-            Document doc = Jsoup.connect(URL).get();
-            Elements articles = doc.select("article");
-
-            return articles.stream()
-                    .map(this::extractSummary)
-                    .filter(Objects::nonNull)
-                    .toList();
-
-        } catch (IOException e) {
-            throw new CollectException("Failed to collect data from CIN-UFPE", e);
-        }
+    protected String baseUrl() {
+        return BASE_URL;
     }
 
     @Override
-    public DetailedContent detailedCollect(String newsUrl) {
-        try {
-            Document doc = Jsoup.connect(newsUrl).get();
-            Element contentContainer = doc.selectFirst(".colibri-post-content");
-
-            String fullContent = contentContainer != null
-                    ? contentContainer.select("p").text()
-                    : "";
-
-            String imageUrl = extractImageUrl(doc, contentContainer);
-
-            return new DetailedContent(fullContent, imageUrl);
-
-        } catch (IOException e) {
-            throw new CollectException("Failed to fetch detail from CIN-UFPE: " + newsUrl, e);
-        }
+    protected String imageFallBackUrl() {
+        return "https://imgs.search.brave.com/kubq3bDoGwCh3JGhSZYTVP6uSodLmv0-9vkZcdIp9zs/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly9wb3J0/YWwuY2luLnVmcGUu/YnIvd3AtY29udGVu/dC91cGxvYWRzLzIw/MjAvMDcvSG9yaXpv/bnRhbC1WZXJtZWxo/by1Mb2dvdGlwby1D/SW4tVUZQRS5wbmc";
     }
 
-    private String extractImageUrl(Document doc, Element contentContainer) {
-        Element ogImage = doc.selectFirst("meta[property=og:image]");
-        if (ogImage != null) {
-            return ogImage.attr("content");
-        }
-
-        if (contentContainer != null) {
-            Element firstImg = contentContainer.selectFirst("img");
-            if (firstImg != null) {
-                return firstImg.attr("src");
-            }
-        }
-
-        return null;
+    @Override
+    protected String postsEndpoint() {
+        return BASE_URL + "/wp-json/wp/v2/posts?per_page=20&categories_exclude=1&_embed=wp:featuredmedia";
     }
 
-    private NewsSummary extractSummary(Element article) {
-        Element titleLink = article.selectFirst("h4 a, h3 a, .entry-title a");
-        Element summaryEl = article.selectFirst("p");
-
-        if (titleLink == null || summaryEl == null) {
-            return null;
-        }
-
-        String title = titleLink.text();
-        String url = titleLink.attr("href");
-        String summary = summaryEl.text();
-
-        return new NewsSummary(title, summary, url, SourceName.CIN_UFPE, LocalDateTime.now());
+    @Override
+    public SourceName sourceName() {
+        return SourceName.CIN_UFPE;
     }
 }

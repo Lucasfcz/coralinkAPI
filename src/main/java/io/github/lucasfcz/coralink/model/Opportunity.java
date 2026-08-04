@@ -47,12 +47,14 @@ public class Opportunity {
     @CollectionTable(name = "opportunity_target_audiences", joinColumns = @JoinColumn(name = "opportunity_id"))
     @Enumerated(EnumType.STRING)
     @Column(name = "target_audience")
-    private Set<TargetAudience> targetAudiences = new HashSet<>();
+    private Set<TargetCourseAudience> targetCourseAudiences = new HashSet<>();
 
     @Enumerated(EnumType.STRING)
     private Modality modality;
 
-    private LocalDate eventDate;
+    private LocalDate startDate;
+
+    private LocalDate endDate;
 
     private LocalDate registrationDeadline;
 
@@ -72,7 +74,7 @@ public class Opportunity {
     private String imageUrl;
 
     @Column(nullable = false)
-    private boolean isFree;
+    private Boolean isFree;
 
     @CreationTimestamp
     @Column(nullable = false)
@@ -80,17 +82,18 @@ public class Opportunity {
 
     @Builder
     private Opportunity(RawOpportunity rawOpportunity, String summary, OpportunityType type,
-                        Set<ThematicArea> thematicAreas, Set<TargetAudience> targetAudiences, Modality modality,
-                        LocalDate eventDate, LocalDate registrationDeadline, String location, String officialUrl,
-                        Double confidenceScoreAi, String imageUrl, boolean isFree) {
+                        Set<ThematicArea> thematicAreas, Set<TargetCourseAudience> targetCourseAudiences, Modality modality,
+                        LocalDate startDate, LocalDate endDate, LocalDate registrationDeadline, String location, String officialUrl,
+                        Double confidenceScoreAi, String imageUrl, Boolean isFree) {
         this.rawOpportunity = rawOpportunity;
         this.title = rawOpportunity.getTitle();
         this.summary = summary;
         this.type = type;
         this.thematicAreas = thematicAreas != null ? thematicAreas : new HashSet<>();
-        this.targetAudiences = targetAudiences != null ? targetAudiences : new HashSet<>();
+        this.targetCourseAudiences = targetCourseAudiences != null ? targetCourseAudiences : new HashSet<>();
         this.modality = modality;
-        this.eventDate = eventDate;
+        this.startDate = startDate;
+        this.endDate = endDate;
         this.registrationDeadline = registrationDeadline;
         this.location = location;
         this.officialUrl = officialUrl;
