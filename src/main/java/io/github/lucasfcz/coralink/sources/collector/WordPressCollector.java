@@ -69,7 +69,6 @@ public abstract class WordPressCollector extends AbstractCollector {
     }
 
     protected NewsSummary mapPost(JsonNode post) {
-
         String title = Jsoup.parse(post.path("title").path("rendered").asText()).text();
 
         String summary = Jsoup.parse(post.path("excerpt").path("rendered").asText()).text();
@@ -100,8 +99,6 @@ public abstract class WordPressCollector extends AbstractCollector {
     @Override
     public DetailedContent detailedCollect(String url) {
         try {
-
-
         Document document = requestDocument(url);
 
         Element content = document.selectFirst(

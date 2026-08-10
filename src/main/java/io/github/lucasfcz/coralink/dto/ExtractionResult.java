@@ -11,7 +11,7 @@ public record ExtractionResult(
         @NotNull Long rawOpportunityId,
         @NotBlank String summary,
         @NotNull OpportunityType type,
-        @NotNull Set<ThematicArea> thematicAreas,
+        @NotNull String thematicArea,
         @NotNull Set<TargetCourseAudience> targetCourseAudiences,
         @NotNull Modality modality,
         @NotNull LocalDate startDate,
@@ -19,5 +19,6 @@ public record ExtractionResult(
         @NotNull LocalDate registrationDeadline,
         @NotNull String location,
         @NotNull Boolean isFree,
+        @NotNull Boolean isExclusive,
         @NotNull Double confidenceScore
 ) {}

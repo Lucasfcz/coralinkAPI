@@ -1,6 +1,5 @@
 package io.github.lucasfcz.coralink.model;
 
-import io.github.lucasfcz.coralink.enums.OpportunityType;
 import io.github.lucasfcz.coralink.enums.SourceName;
 import jakarta.persistence.*;
 import lombok.AccessLevel;

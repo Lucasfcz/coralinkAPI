@@ -37,11 +37,8 @@ public class Opportunity {
     @Column(nullable = false)
     private OpportunityType type;
 
-    @ElementCollection(fetch = FetchType.EAGER)
-    @CollectionTable(name = "opportunity_thematic_areas", joinColumns = @JoinColumn(name = "opportunity_id"))
-    @Enumerated(EnumType.STRING)
     @Column(name = "thematic_area")
-    private Set<ThematicArea> thematicAreas = new HashSet<>();
+    private String thematicArea;
 
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "opportunity_target_audiences", joinColumns = @JoinColumn(name = "opportunity_id"))
@@ -76,20 +73,24 @@ public class Opportunity {
     @Column(nullable = false)
     private Boolean isFree;
 
+    // this variable means if opportunity is exclusive for students from the university or not, if true, it is exclusive, if false, it is open for everyone
+    @Column(nullable = false)
+    private Boolean isExclusive;
+
     @CreationTimestamp
     @Column(nullable = false)
     private LocalDateTime createdAt;
 
     @Builder
     private Opportunity(RawOpportunity rawOpportunity, String summary, OpportunityType type,
-                        Set<ThematicArea> thematicAreas, Set<TargetCourseAudience> targetCourseAudiences, Modality modality,
+                        String thematicArea, Set<TargetCourseAudience> targetCourseAudiences, Modality modality,
                         LocalDate startDate, LocalDate endDate, LocalDate registrationDeadline, String location, String officialUrl,
-                        Double confidenceScoreAi, String imageUrl, Boolean isFree) {
+                        Double confidenceScoreAi, String imageUrl, Boolean isFree, Boolean isExclusive) {
         this.rawOpportunity = rawOpportunity;
         this.title = rawOpportunity.getTitle();
         this.summary = summary;
         this.type = type;
-        this.thematicAreas = thematicAreas != null ? thematicAreas : new HashSet<>();
+        this.thematicArea = thematicArea;
         this.targetCourseAudiences = targetCourseAudiences != null ? targetCourseAudiences : new HashSet<>();
         this.modality = modality;
         this.startDate = startDate;
@@ -101,5 +102,6 @@ public class Opportunity {
         this.sourceName = rawOpportunity.getSourceName();
         this.imageUrl = imageUrl;
         this.isFree = isFree;
+        this.isExclusive = isExclusive;
     }
 }

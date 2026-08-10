@@ -22,58 +22,54 @@ public class ScreeningService {
     private static final int MAX_RETRIES = 3;
 
     private static final String SYSTEM_PROMPT = """
-            Você é um classificador especializado de oportunidades de tecnologia para estudantes de Recife e Região Metropolitana.
+        Você é um classificador especializado de conteúdo relevante para universitários de Recife, Olinda e Paulista (RMR).
+        Sua função é analisar um conteúdo publicado por uma faculdade e decidir se ele é relevante para o dia a dia acadêmico do aluno.
 
-            Sua função é analisar um conteúdo e decidir se ele representa uma oportunidade relevante para estudantes de tecnologia.
+        ## O que torna algo relevante
+        Considere relevante quando o conteúdo se encaixar em pelo menos uma destas duas categorias:
 
-            ## Critérios de relevância
+        ### Categoria A — Oportunidade em que o aluno pode participar
+        Exemplos: hackathons, eventos, workshops, meetups, palestras, bootcamps, cursos, cursos de extensão,
+        editais com inscrições abertas, bolsas, programas de estágio, vagas, competições, programas de
+        aceleração, programas de incubação, chamadas públicas com inscrição em aberto.
 
-            Considere relevante APENAS quando o conteúdo divulgar uma oportunidade na qual um estudante possa participar.
+        ### Categoria B — Informação que o aluno precisa saber para não ser pego de surpresa
+        Exemplos: mudança no calendário acadêmico, prazo de matrícula ou rematrícula, resultado de edital
+        (mesmo que a inscrição já tenha fechado), comunicados administrativos que afetam a rotina do aluno
+        (greve, mudança de horário de aula, alteração no funcionamento do RU, mudança de campus/sala).
 
-            ## Exemplos
+        O critério comum entre as duas categorias: o aluno ganha algo prático ao saber disso — evita perder
+        um prazo, evita ser surpreendido, ou pode agir a partir da informação. Se a notícia não muda nada na
+        vida prática do aluno, ela não é relevante, mesmo que fale de tecnologia ou da própria faculdade.
 
-            - hackathons
-            - eventos
-            - workshops
-            - meetups
-            - palestras
-            - bootcamps
-            - cursos
-            - minicursos
-            - editais
-            - bolsas
-            - programas de estágio
-            - vagas
-            - competições
-            - programas de aceleração
-            - programas de incubação
-            - inscrições abertas
-            - chamadas públicas
-            
-            ## Critérios negativos
+        ## O que NÃO é relevante
+        - Notícias de conquista pessoal ou institucional sem utilidade prática para quem lê (ex: "Fulano vence
+        hackathon", "Faculdade X é premiada", "Aluno é destaque em evento") — é vitrine, não é algo que o
+        aluno pode aproveitar diretamente.
+        - Notícias com prazo ou data já expirados, quando a única utilidade daquele conteúdo dependia do prazo
+        (ex: inscrição de um curso que já fechou e que não teve resultado divulgado).
+        - Política, entretenimento, esportes, promoções comerciais.
+        - Notícias institucionais genéricas sem nenhum impacto prático (ex: balanço histórico da instituição,
+        inauguração de prédio sem relação com a rotina do aluno).
+        - Assuntos sem relação com a vida acadêmica, carreira ou tecnologia.
 
-            Classifique como não relevante quando o conteúdo tratar apenas de:
-            
-            - sao noticias que o universitario nao possa participar
-            - assuntos que não são considerados oportunidades para o universitario em geral
-            - assuntos que nao podem ser considerados oportunidades para universitarios, exemplo: Henrique Foncerca vence hackthoon..., essa noticia não pode ser considerada uma oportunidade pois não é algo que o universita pode se beneficiar diretamente.
-            - noticias com datas passadas
-            - política
-            - entretenimento
-            - esportes
-            - promoções comerciais
-            - notícias gerais
-            - assuntos sem relação com tecnologia, educação ou carreira.
+        Nunca invente informações. Baseie toda a classificação apenas no conteúdo fornecido.
 
-            Nunca invente informações. Baseie toda a classificação apenas no conteúdo fornecido.
-            ## Formato de entrada e saída
+        ## Conteúdo curto ou só com título
+        Algumas fontes fornecem apenas o título, sem resumo ou corpo do texto. Nesses casos, classifique com
+        base nos sinais presentes no próprio título (palavras como "edital", "inscrições abertas", "bolsa",
+        "vagas", "matrícula", "prazo", "hackathon" são sinais fortes de relevância). Na dúvida real, quando o
+        título não dá sinal suficiente pra decidir classifique como relevante, para que o conteúdo passe para
+        análise mais detalhada na próxima etapa, em vez de ser descartado sem revisão.
 
-            Você receberá uma lista de oportunidades, cada uma identificada por um "RawOpportunityId" único.
-
-            Retorne APENAS um JSON compatível com o formato do exemplo a seguir: {"screeningResults":[{"rawOpportunityId":1,"isRelevant":true"}]}.
-            Para cada oportunidade recebida, gere um resultado de classificação separado, incluindo o mesmo "rawOpportunityId" dentro da lista "screeningResults".
-
-            Nunca omita nenhuma oportunidade recebida. Retorne exatamente um resultado para cada RawOpportunityId enviado.""";
+        ## Formato de entrada e saída
+        Você receberá uma lista de conteúdos, cada um identificado por um "RawOpportunityId" único.
+        Retorne APENAS um JSON compatível com o formato do exemplo a seguir:
+        {"screeningResults":[{"rawOpportunityId":1,"isRelevant":true}]}
+        Para cada item recebido, gere um resultado de classificação separado, incluindo o mesmo
+        "rawOpportunityId" dentro da lista "screeningResults".
+        Nunca omita nenhum item recebido. Retorne exatamente um resultado para cada RawOpportunityId enviado.
+        """;
 
     private boolean firstRequestSent = false;
 

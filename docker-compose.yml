@@ -1,0 +1,30 @@
+services:
+  backend:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: coralink
+      POSTGRES_USER: coralink
+      POSTGRES_PASSWORD: coralink
+    ports:
+      - "5432:5432"
+    volumes:
+      - coralink_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U coralink"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  coralink_data:

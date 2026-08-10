@@ -186,6 +186,67 @@ class CollectorsIntegrationTest {
         assertEquals(baseUrl + "/static/porto.png", detail.imageUrl());
     }
 
+    @Test
+    void unibraCollectorParsesHtml() throws Exception {
+        server = startServer();
+        String baseUrl = baseUrl();
+        registerHtml("/unibra/buscar/todos/1", """
+                <html><body>
+                  <a class="card-evento" href="%s/unibra/evento-1">
+                      <div class="card-body">
+                          <h3 class="card-title">Evento Unibra</h3>
+                          <p class="card-text">Resumo Evento Unibra</p>
+                      </div>
+                  </a>
+                </body></html>
+                """.formatted(baseUrl));
+        registerHtml("/unibra/evento-1",
+                "<html><body><main><article><div class='entry-content'><p>Detalhe Unibra</p></div></article></main></body></html>");
+
+        UnibraCollector collector = new UnibraCollector() {
+            @Override protected String baseUrl() { return baseUrl + "/unibra"; }
+            @Override protected String pageUrl() { return baseUrl + "/unibra/buscar/todos/1"; }
+        };
+
+        List<NewsSummary> news = collector.collect();
+        assertEquals(1, news.size());
+        assertEquals("Evento Unibra", news.getFirst().title());
+        assertEquals("Resumo Evento Unibra", news.getFirst().shortSummary());
+
+        DetailedContent detail = collector.detailedCollect(news.getFirst().url());
+        assertNotNull(detail);
+        assertTrue(detail.fullContent().contains("Detalhe Unibra"));
+    }
+
+    @Test
+    void unifafireCollectorCollectsAndExtractsDetails() throws Exception {
+        server = startServer();
+        String baseUrl = baseUrl();
+        String endpoint = "/unifafire/wp-json/wp/v2/posts?per_page=20&_embed=wp:featuredmedia";
+        registerJson(endpoint, """
+                [{
+                  "title":{"rendered":"Noticia UNIFAFIRE"},
+                  "excerpt":{"rendered":"<p>Resumo UNIFAFIRE</p>"},
+                  "link":"%s/unifafire/post-1",
+                  "date":"2026-08-03T10:00:00-03:00"
+                }]
+                """.formatted(baseUrl));
+        registerHtml("/unifafire/post-1", """
+                <html><head><meta property="og:image" content="%s/static/unifafire.png"></head>
+                <body><article><div class="entry-content"><p>Conteudo UNIFAFIRE</p></div></article></body></html>
+                """.formatted(baseUrl));
+
+        UnifafireCollector collector = new UnifafireCollector() {
+            @Override protected String baseUrl() { return baseUrl + "/unifafire"; }
+        };
+
+        List<NewsSummary> news = collector.collect();
+        assertEquals(1, news.size());
+        DetailedContent detail = collector.detailedCollect(news.getFirst().url());
+        assertNotNull(detail);
+        assertTrue(detail.fullContent().contains("Conteudo UNIFAFIRE"));
+    }
+
     private HttpServer startServer() throws IOException {
         HttpServer httpServer = HttpServer.create(new InetSocketAddress(0), 0);
         httpServer.start();
