@@ -19,6 +19,6 @@ public record ExtractionResult(
         @NotNull LocalDate registrationDeadline,
         @NotNull String location,
         @NotNull Boolean isFree,
-        @NotNull Boolean isExclusive,
+        @NotNull Boolean isForAll,
         @NotNull Double confidenceScore
 ) {}

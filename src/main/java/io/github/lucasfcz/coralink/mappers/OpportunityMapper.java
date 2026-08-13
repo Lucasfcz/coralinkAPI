@@ -24,7 +24,7 @@ public class OpportunityMapper {
                 .confidenceScoreAi(result.confidenceScore())
                 .imageUrl(imageUrl)
                 .isFree(result.isFree())
-                .isExclusive(result.isExclusive())
+                .isForAll(result.isForAll())
                 .build();
     }
 
@@ -44,6 +44,6 @@ public class OpportunityMapper {
                 op.getOfficialUrl(),
                 op.getImageUrl(),
                 op.getIsFree(),
-                op.getIsExclusive());
+                op.getIsForAll());
     }
 }

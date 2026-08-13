@@ -75,7 +75,7 @@ public class Opportunity {
 
     // this variable means if opportunity is exclusive for students from the university or not, if true, it is exclusive, if false, it is open for everyone
     @Column(nullable = false)
-    private Boolean isExclusive;
+    private Boolean isForAll;
 
     @CreationTimestamp
     @Column(nullable = false)
@@ -85,7 +85,7 @@ public class Opportunity {
     private Opportunity(RawOpportunity rawOpportunity, String summary, OpportunityType type,
                         String thematicArea, Set<TargetCourseAudience> targetCourseAudiences, Modality modality,
                         LocalDate startDate, LocalDate endDate, LocalDate registrationDeadline, String location, String officialUrl,
-                        Double confidenceScoreAi, String imageUrl, Boolean isFree, Boolean isExclusive) {
+                        Double confidenceScoreAi, String imageUrl, Boolean isFree, Boolean isForAll) {
         this.rawOpportunity = rawOpportunity;
         this.title = rawOpportunity.getTitle();
         this.summary = summary;
@@ -102,6 +102,6 @@ public class Opportunity {
         this.sourceName = rawOpportunity.getSourceName();
         this.imageUrl = imageUrl;
         this.isFree = isFree;
-        this.isExclusive = isExclusive;
+        this.isForAll = isForAll;
     }
 }

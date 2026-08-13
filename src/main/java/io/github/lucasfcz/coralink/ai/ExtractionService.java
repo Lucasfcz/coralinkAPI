@@ -52,8 +52,8 @@ public class ExtractionService {
         - Caso nao acredite que nenhum dos enums presentes nas classes acima se encaixe perfeitamente na oportunidade, considere como OTHER em OpportunityType e STUDENTS_IN_GENERAL em TargetCourseAudience.
         - Para o modality veja se a oportunidade acontece presencialmente, online ou hibrido e classifique de acordo com a classe Modality usando os enums: ONLINE, IN_PERSON ou HYBRID.
 
-        Regras para o isExclusive:
-        - ele se diz respeito a oportunidades exclusivas para estudantes da propria faculdade, caso seja aberto ao publico geral considere isExcluise = false, caso seja exclusivo para os estudantes da faculdade considere isExclusive = true;
+        Regras para o isForAll:
+        - ele se diz respeito a oportunidades exclusivas para estudantes da propria faculdade, caso seja aberto ao publico geral considere isForAll = true, caso seja exclusivo para os estudantes da faculdade considere isForAll = false;
         
         Regras para datas:
         - Use o formato ISO yyyy-MM-dd.
@@ -84,7 +84,7 @@ public class ExtractionService {
           "registrationDeadline": "2026-07-31",
           "location": "Centro do Recife",
           "isFree": true,
-          "isExclusive": false,
+          "isForAll": false,
           "confidenceScore": 0.95
         }
 

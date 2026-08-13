@@ -19,5 +19,5 @@ public record OpportunityResponse(
         String officialUrl,
         String imageUrl,
         Boolean isFree,
-        Boolean isExclusive
+        Boolean isForAll
 ) { }
