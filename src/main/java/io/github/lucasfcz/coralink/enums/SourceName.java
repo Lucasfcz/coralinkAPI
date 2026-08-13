@@ -6,5 +6,7 @@ public enum SourceName {
     UFPE,
     UPE,
     PORTO_DIGITAL,
-    CESAR_SCHOOL
+    CESAR_SCHOOL,
+    UNIBRA,
+    UNIFAFIRE
 }

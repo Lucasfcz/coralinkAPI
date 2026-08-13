@@ -8,7 +8,6 @@ import io.github.lucasfcz.coralink.exceptions.BadResponseException;
 import io.github.lucasfcz.coralink.model.RawOpportunity;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -33,19 +32,29 @@ public class ExtractionService {
 
         confidenceScore deve estar entre 0.0 e 1.0.
         Preserve exatamente o rawOpportunityId recebido.
+        
+        Regras para o summary:
+        - Ele deve conter todas as informacoes mais importantes para o universitario nao precisar ler um pdf enorme para entender a noticia.
+        - Ele nao deve conter informacoes inuteis para o estudante.
 
         Regras para classificação geral da oportunidade:
-        - Leia o conteudo da oportunidade sua missao é classificar a oportunidade de acordo com os itens a seguir: summary, type, thematicAreas, targetCourseAudiences,
+        - Leia o conteudo da oportunidade sua missao é classificar a oportunidade de acordo com os itens a seguir: summary, type, thematicArea, targetCourseAudiences,
         modality, startDate, endDate, registrationDeadline, location, isFree e confidenceScore. seja preciso na classificação
         - O summary deve conter um breve resumo sobre do que a oportunidade se trata para o estudante quando ir para a pagina da oportunidade nao ter que ler 10 paginas para entende-la
         - NÃO crie campos adicionais ou campos inexistentes.
         - Caso a oportunidade nao se refira em nenhum momento a dinheiro, taxa ou pagar para ter acesso, considere que eh uma oportunidade gratuita ou seja isFree = true.
 
+        Regras para Thematic Area:
+        - Voce deve colocar qual a area tematica da noticia ou informacao com base no conteudo da noticia, exemplo nos cursos de tecnologia existem diversas areas como backend, devops, fullStack... cada curso tem sua area tematica, entao voce deve colocar a area tematica da noticia com base no conteudo da noticia, caso nao consiga identificar ou caso a noticia seja geral area tematica coloque GERAL.
+        
         Regras para Enums:
-        - NUNCA crie novos enums utilize apenas os que estao presentes nas classes: OpportunityType, Modality, ThematicArea, TargetCourseAudience
-        - Caso nao acredite que nenhum dos enums presentes nas classes acima se encaixe perfeitamente na oportunidade, considere como OTHER em OpportunityType, GENERAL em ThematicArea e STUDENTS_IN_GENERAL em TargetCourseAudience.
+        - NUNCA crie novos enums utilize apenas os que estao presentes nas classes: OpportunityType, Modality, TargetCourseAudience
+        - Caso nao acredite que nenhum dos enums presentes nas classes acima se encaixe perfeitamente na oportunidade, considere como OTHER em OpportunityType e STUDENTS_IN_GENERAL em TargetCourseAudience.
         - Para o modality veja se a oportunidade acontece presencialmente, online ou hibrido e classifique de acordo com a classe Modality usando os enums: ONLINE, IN_PERSON ou HYBRID.
 
+        Regras para o isExclusive:
+        - ele se diz respeito a oportunidades exclusivas para estudantes da propria faculdade, caso seja aberto ao publico geral considere isExcluise = false, caso seja exclusivo para os estudantes da faculdade considere isExclusive = true;
+        
         Regras para datas:
         - Use o formato ISO yyyy-MM-dd.
         - Para eventos de um único dia, startDate e endDate devem ser iguais.
@@ -61,21 +70,21 @@ public class ExtractionService {
           "endDate": "2026-08-07"
         }
 
-        Você receberá exatamente UMA oportunidade por vez. Retorne um único objeto JSON
-        (não um array, não envolva em uma lista), seguindo exatamente este formato:
+        Você receberá exatamente UMA oportunidade por vez. Retorne um único objeto JSON, seguindo exatamente este formato:
 
         {
           "rawOpportunityId": 123,
           "summary": "Resumo da oportunidade",
           "type": "COURSE",
-          "thematicAreas": ["WEB_DEVELOPMENT", "DATA_SCIENCE"],
-          "targetCourseAudiences": ["COMPUTER_SCIENCE", "STUDENTS_IN_GENERAL"],
+          "thematicArea": "WEB_DEVELOPMENT",
+          "targetCourseAudiences": ["CIENCIA_DA_COMPUTACAO", "ENGENHARIA_DE_SOFTWARE", "SISTEMAS_DE_INFORMACAO", "ADS", "ENGENHARIA_DA_COMPUTACAO, "ESTUDANTE_DE_TECNOLOGIA"],
           "modality": "ONLINE",
           "startDate": "2026-08-03",
           "endDate": "2026-08-07",
           "registrationDeadline": "2026-07-31",
           "location": "Centro do Recife",
           "isFree": true,
+          "isExclusive": false,
           "confidenceScore": 0.95
         }
 
@@ -183,7 +192,7 @@ public class ExtractionService {
                 || r.rawOpportunityId() == null
                 || r.summary() == null || r.summary().isBlank()
                 || r.type() == null
-                || r.thematicAreas() == null
+                || r.thematicArea().isBlank()
                 || r.targetCourseAudiences() == null
                 || r.confidenceScore() == null
                 || r.confidenceScore() < 0

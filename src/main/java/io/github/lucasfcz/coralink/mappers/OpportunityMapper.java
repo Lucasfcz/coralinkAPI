@@ -13,7 +13,7 @@ public class OpportunityMapper {
                 .rawOpportunity(raw)
                 .summary(result.summary())
                 .type(result.type())
-                .thematicAreas(result.thematicAreas())
+                .thematicArea(result.thematicArea())
                 .targetCourseAudiences(result.targetCourseAudiences())
                 .modality(result.modality())
                 .startDate(result.startDate())
@@ -24,6 +24,7 @@ public class OpportunityMapper {
                 .confidenceScoreAi(result.confidenceScore())
                 .imageUrl(imageUrl)
                 .isFree(result.isFree())
+                .isExclusive(result.isExclusive())
                 .build();
     }
 
@@ -33,7 +34,7 @@ public class OpportunityMapper {
                 op.getTitle(),
                 op.getSummary(),
                 op.getType(),
-                op.getThematicAreas(),
+                op.getThematicArea(),
                 op.getTargetCourseAudiences(),
                 op.getModality(),
                 op.getStartDate(),
@@ -42,6 +43,7 @@ public class OpportunityMapper {
                 op.getLocation(),
                 op.getOfficialUrl(),
                 op.getImageUrl(),
-                op.getIsFree());
+                op.getIsFree(),
+                op.getIsExclusive());
     }
 }

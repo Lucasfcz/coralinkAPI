@@ -8,11 +8,7 @@ import org.jsoup.nodes.Element;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 @Component
 public class UfpeCollector extends HtmlCollector {
@@ -37,36 +33,25 @@ public class UfpeCollector extends HtmlCollector {
 
     @Override
     protected List<Element> articles(Document document) {
-        return new ArrayList<>(document.select(
-                        "h3.list-full-content__title a[href*='/ascom/noticias/-/asset_publisher/']")
-                .stream()
-                .filter(link -> !link.text().isBlank())
-                .collect(Collectors.toMap(
-                        link -> link.absUrl("href"),
-                        Function.identity(),
-                        (first, ignored) -> first,
-                        LinkedHashMap::new
-                ))
-                .values());
+        return document.select("h3.list-full-content__title > a");
     }
 
     @Override
     protected NewsSummary mapArticle(Element articleLink) {
         String title = articleLink.text().trim();
         String url = articleLink.absUrl("href");
+
         if (title.isBlank() || url.isBlank()) {
             return null;
         }
 
-        Element contentContainer = articleLink.closest(".list-full-content__content");
-        Element summaryElement = contentContainer == null
-                ? null
-                : contentContainer.selectFirst(".list-full-content__sumary");
-        String summary = summaryElement == null
-                ? title
-                : summaryElement.text().trim();
-
-        return new NewsSummary(title, summary.isBlank() ? title : summary, url, sourceName(), LocalDateTime.now());
+        return new NewsSummary(
+                title,
+                title,
+                url,
+                sourceName(),
+                LocalDateTime.now()
+        );
     }
 
     @Override

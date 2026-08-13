@@ -11,18 +11,19 @@ public class OpportunitySpecifications {
 
     public static Specification<Opportunity> filters(
             OpportunityType type,
-            Set<ThematicArea> thematicAreas,
             Set<TargetCourseAudience> targetCourseAudiences,
             Modality modality,
-            Boolean isFree) {
+            Boolean isFree,
+            Boolean isExclusive
+    ) {
 
         return Specification
                 .where(isUpcomingOrOngoing())
                 .and(hasType(type))
-                .and(hasThematicAreas(thematicAreas))
                 .and(hasTargetAudiences(targetCourseAudiences))
                 .and(hasModality(modality))
-                .and(hasIsFree(isFree));
+                .and(hasIsFree(isFree))
+                .and(hasIsExclusive(isExclusive));
     }
 
     //this get only relevant opportunities, which are the ones that are upcoming or ongoing
@@ -37,16 +38,6 @@ public class OpportunitySpecifications {
         return (root, query, cb) -> type == null
                 ? null
                 : cb.equal(root.get("type"), type);
-    }
-
-    private static Specification<Opportunity> hasThematicAreas(Set<ThematicArea> areas) {
-        return (root, query, cb) -> {
-            if (areas == null || areas.isEmpty()) {
-                return null;
-            }
-            query.distinct(true);
-            return root.join("thematicAreas").in(areas);
-        };
     }
 
     private static Specification<Opportunity> hasTargetAudiences(Set<TargetCourseAudience> audiences) {
@@ -69,5 +60,11 @@ public class OpportunitySpecifications {
         return (root, query, cb) -> isFree == null
                 ? null
                 : cb.equal(root.get("isFree"), isFree);
+    }
+
+    private static Specification<Opportunity> hasIsExclusive(Boolean isExclusive) {
+        return (root, query, cb) -> isExclusive == null
+                ? null
+                : cb.equal(root.get("isExclusive"), isExclusive);
     }
 }

@@ -23,16 +23,16 @@ public class OpportunityService {
     private final OpportunityMapper opportunityMapper;
 
     // only get relevant opportunities that are upcoming or ongoing, and apply filters if provided
-    @Cacheable(value = "opportunities", key = "{#type, #thematicAreas, #targetCourseAudiences, #modality, #isFree, #pageable}")
+    @Cacheable(value = "opportunities", key = "{#type, #targetCourseAudiences, #modality, #isFree, #isExclusive, #pageable}")
     public Page<OpportunityResponse> getRelevantOpportunities(
             OpportunityType type,
-            Set<ThematicArea> thematicAreas,
             Set<TargetCourseAudience> targetCourseAudiences,
             Modality modality,
             Boolean isFree,
+            Boolean isExclusive,
             Pageable pageable) {
 
-        var spec = OpportunitySpecifications.filters(type, thematicAreas, targetCourseAudiences, modality, isFree);
+        var spec = OpportunitySpecifications.filters(type, targetCourseAudiences, modality, isFree, isExclusive);
 
         return opportunityRepository.findAll(spec, pageable).map(opportunityMapper::toResponse);
     }

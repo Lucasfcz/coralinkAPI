@@ -2,7 +2,6 @@ package io.github.lucasfcz.coralink.sources.collector;
 
 import io.github.lucasfcz.coralink.dto.DetailedContent;
 import io.github.lucasfcz.coralink.dto.NewsSummary;
-import io.github.lucasfcz.coralink.exceptions.CollectException;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -14,7 +13,7 @@ import java.util.List;
 @Slf4j
 public abstract class AbstractCollector implements Collector {
 
-    private static final int TIMEOUT_MILLIS = 15_000;
+    private static final int TIMEOUT_MILLIS = 15000;
 
     protected abstract String baseUrl();
 

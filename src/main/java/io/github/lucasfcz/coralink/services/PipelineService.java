@@ -11,6 +11,7 @@ import io.github.lucasfcz.coralink.sources.collector.Collector;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
@@ -33,6 +34,7 @@ public class PipelineService {
     private final PipelinePersistenceService persistenceService;
     private final List<Collector> collectors;
 
+    @Scheduled(fixedDelayString = "${coralink.scheduler.source-check-rate-ms}")
     @CacheEvict(value = "opportunities", allEntries = true)
     public PipelineRunResult runFullPipeline() {
         Instant start = Instant.now();

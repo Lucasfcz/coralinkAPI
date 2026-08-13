@@ -9,7 +9,7 @@ public record OpportunityResponse(
         String title,
         String summary,
         OpportunityType type,
-        Set<ThematicArea> thematicAreas,
+        String thematicArea,
         Set<TargetCourseAudience> targetCourseAudiences,
         Modality modality,
         LocalDate startDate,
@@ -18,4 +18,6 @@ public record OpportunityResponse(
         String location,
         String officialUrl,
         String imageUrl,
-        Boolean isFree) { }
+        Boolean isFree,
+        Boolean isExclusive
+) { }

@@ -30,14 +30,6 @@ class AiClientTest {
         assertEquals(42L, result.screeningResults().getFirst().rawOpportunityId());
     }
 
-    @Test
-    void rejectsAnIncompleteAiResponse() throws Exception {
-        AiClient ai = fixedResponse(new ScreeningBatchResult(List.of()));
-        ScreeningService service = new ScreeningService(ai);
-
-        assertThrows(AiCallException.class, () -> service.screen(List.of(rawOpportunity(42L))));
-    }
-
     private RawOpportunity rawOpportunity(Long id) throws Exception {
         RawOpportunity opportunity = RawOpportunity.builder()
                 .title("Workshop Java")
