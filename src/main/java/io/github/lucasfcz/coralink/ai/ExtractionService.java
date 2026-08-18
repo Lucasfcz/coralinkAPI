@@ -70,14 +70,14 @@ public class ExtractionService {
           "endDate": "2026-08-07"
         }
 
-        Você receberá exatamente UMA oportunidade por vez. Retorne um único objeto JSON, seguindo exatamente este formato:
+        Você receberá exatamente UMA oportunidade por vez. Retorne um único objeto JSON, seguindo exatamente este formato(use como exemplo/base):
 
         {
           "rawOpportunityId": 123,
           "summary": "Resumo da oportunidade",
           "type": "COURSE",
-          "thematicArea": "WEB_DEVELOPMENT",
-          "targetCourseAudiences": ["CIENCIA_DA_COMPUTACAO", "ENGENHARIA_DE_SOFTWARE", "SISTEMAS_DE_INFORMACAO", "ADS", "ENGENHARIA_DA_COMPUTACAO, "ESTUDANTE_DE_TECNOLOGIA"],
+          "thematicArea": "Desenvolvimento Web",
+          "targetCourseAudiences": ["ADS", "COMPUTER_SCIENCE", "SOFTWARE_ENGINEERING", "INFORMATION_SYSTEMS", "COMPUTER_ENGINEERING, "TECHNOLOGY_STUDENTS"],
           "modality": "ONLINE",
           "startDate": "2026-08-03",
           "endDate": "2026-08-07",
@@ -91,8 +91,6 @@ public class ExtractionService {
         Não escreva nada além do JSON.
         """;
 
-    private boolean firstRequestSent = false;
-
     public ExtractionBatchResult extract(List<RawOpportunity> rawOpportunities, Map<Long, DetailedContent> contentsById) {
         if (rawOpportunities == null || rawOpportunities.isEmpty()) {
             throw new BadResponseException("At least one raw opportunity is required for extraction");
@@ -103,11 +101,11 @@ public class ExtractionService {
 
         List<ExtractionResult> results = new ArrayList<>();
         List<Long> failedIds = new ArrayList<>();
-        firstRequestSent = false;
 
         for (RawOpportunity rawOpportunity : rawOpportunities) {
             DetailedContent content = contentsById.get(rawOpportunity.getId());
 
+            // don't throw an exception if found a bad detailed content, had to continue with others
             if (rawOpportunity.getId() == null || content == null || content.fullContent() == null || content.fullContent().isBlank()) {
                 log.warn("Skipping raw opportunity {} — missing id or detailed content", rawOpportunity.getId());
                 failedIds.add(rawOpportunity.getId());
@@ -124,12 +122,6 @@ public class ExtractionService {
 
         if (!failedIds.isEmpty()) {
             log.error("Unable to extract {} opportunities after {} attempts each. Ids: {}", failedIds.size(), MAX_RETRIES_PER_ITEM, failedIds);
-            for (Long id : failedIds) {
-                rawOpportunities.stream()
-                        .filter(o -> Objects.equals(o.getId(), id))
-                        .findFirst()
-                        .ifPresent(RawOpportunity::setIsInvalid);
-            }
         }
 
         return new ExtractionBatchResult(results);
@@ -138,31 +130,24 @@ public class ExtractionService {
     private ExtractionResult extractWithRetries(RawOpportunity rawOpportunity, DetailedContent content) {
         for (int attempt = 1; attempt <= MAX_RETRIES_PER_ITEM; attempt++) {
             awaitRateLimit();
-
             try {
                 ExtractionResult result = sendExtractionRequest(rawOpportunity, content);
 
                 if (isInvalid(result) || !Objects.equals(result.rawOpportunityId(), rawOpportunity.getId())) {
-                    log.warn("Invalid extraction result for raw opportunity {} on attempt {}/{}",
-                            rawOpportunity.getId(), attempt, MAX_RETRIES_PER_ITEM);
+                    log.warn("Invalid extraction result for raw opportunity {} on attempt {}/{}", rawOpportunity.getId(), attempt, MAX_RETRIES_PER_ITEM);
                     continue;
                 }
 
                 return result;
 
             } catch (RuntimeException e) {
-                log.warn("Extraction call failed for raw opportunity {} on attempt {}/{}",
-                        rawOpportunity.getId(), attempt, MAX_RETRIES_PER_ITEM, e);
+                log.warn("Extraction call failed for raw opportunity {} on attempt {}/{}", rawOpportunity.getId(), attempt, MAX_RETRIES_PER_ITEM, e);
             }
         }
         return null;
     }
 
     private void awaitRateLimit() {
-        if (!firstRequestSent) {
-            firstRequestSent = true;
-            return;
-        }
         try {
             Thread.sleep(20000);
         } catch (InterruptedException e) {

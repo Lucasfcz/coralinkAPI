@@ -26,6 +26,7 @@ public class Configurations {
         };
     }
 
+    // Timeout for AI call in pipeline, to avoid problems with too many requests
     @Bean
     OkHttpClient okHttpClient() {
         return new OkHttpClient.Builder()
