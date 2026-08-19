@@ -20,7 +20,7 @@ public class UnifafireCollector extends WordPressCollector {
 
     @Override
     protected String imageFallBackUrl() {
-        return "https://unifafire.edu.br/wp-content/uploads/2022/04/cropped-180x180_frassino-2-192x192.png";
+        return "https://unifafire.edu.br/wp-content/uploads/2024/05/UNIFAFIREINST2024-2048x1153.webp";
     }
 
 
