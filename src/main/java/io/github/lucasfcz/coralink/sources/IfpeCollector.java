@@ -23,7 +23,7 @@ public class IfpeCollector extends WordPressCollector {
 
     @Override
     protected String imageFallBackUrl() {
-        return "https://imgs.search.brave.com/MzIC0aeQJnXSY7lIg90EC_VZQGZpHzT38gxh-jBiYvQ/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly91cGxv/YWQud2lraW1lZGlh/Lm9yZy93aWtpcGVk/aWEvY29tbW9ucy9k/L2QwL0lmcGVfbG9n/b21hcmNhLnBuZw";
+        return "https://iconape.com/wp-content/png_logo_vector/instituto-federal-de-pernambuco-marca-horizontal-2015.png";
     }
 
     @Override
