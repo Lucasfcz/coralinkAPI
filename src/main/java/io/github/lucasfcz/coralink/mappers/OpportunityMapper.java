@@ -42,6 +42,7 @@ public class OpportunityMapper {
                 op.getRegistrationDeadline(),
                 op.getLocation(),
                 op.getOfficialUrl(),
+                op.getSourceName(),
                 op.getImageUrl(),
                 op.getIsFree(),
                 op.getIsForAll());

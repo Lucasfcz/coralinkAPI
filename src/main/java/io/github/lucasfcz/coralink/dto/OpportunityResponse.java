@@ -17,6 +17,7 @@ public record OpportunityResponse(
         LocalDate registrationDeadline,
         String location,
         String officialUrl,
+        SourceName sourceName,
         String imageUrl,
         Boolean isFree,
         Boolean isForAll
