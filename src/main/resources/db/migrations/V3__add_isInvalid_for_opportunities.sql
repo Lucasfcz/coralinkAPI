@@ -1,2 +1,0 @@
-ALTER TABLE raw_opportunities
-ADD COLUMN is_invalid BOOLEAN DEFAULT FALSE;

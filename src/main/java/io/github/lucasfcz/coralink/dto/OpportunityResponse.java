@@ -20,5 +20,5 @@ public record OpportunityResponse(
         SourceName sourceName,
         String imageUrl,
         Boolean isFree,
-        Boolean isExclusive
+        Boolean isForAll
 ) { }

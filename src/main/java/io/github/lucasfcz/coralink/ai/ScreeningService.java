@@ -23,7 +23,7 @@ public class ScreeningService {
 
     private static final String SYSTEM_PROMPT = """
         Você é um classificador especializado de conteúdo relevante para universitários de Recife, Olinda e Paulista (RMR).
-        Sua função é analisar um conteúdo publicado por uma faculdade e decidir se ele é relevante para o dia a dia acadêmico do aluno.
+        Sua função é analisar um conteúdo publicado por uma faculdade e decidir se ele é relevante para o universitario.
 
         ## O que torna algo relevante
         Considere relevante quando o conteúdo se encaixar em pelo menos uma destas duas categorias:
@@ -71,8 +71,6 @@ public class ScreeningService {
         Nunca omita nenhum item recebido. Retorne exatamente um resultado para cada RawOpportunityId enviado.
         """;
 
-    private boolean firstRequestSent = false;
-
     public ScreeningBatchResult screen(List<RawOpportunity> rawOpportunityList) {
         if (rawOpportunityList == null || rawOpportunityList.isEmpty()) {
             throw new BadResponseException("At least one raw opportunity is required for screening");
@@ -80,7 +78,6 @@ public class ScreeningService {
 
         Map<Long, ScreeningResult> resolved = new LinkedHashMap<>();
         List<RawOpportunity> pending = rawOpportunityList;
-        firstRequestSent = false;
 
         for (int attempt = 1; attempt <= MAX_RETRIES && !pending.isEmpty(); attempt++) {
             for (List<RawOpportunity> batch : partition(pending)) {
@@ -102,12 +99,6 @@ public class ScreeningService {
         if (!pending.isEmpty()) {
             List<Long> failedIds = pending.stream().map(RawOpportunity::getId).toList();
             log.error("Unable to obtain valid screening after " + MAX_RETRIES + " attempts for raw opportunity ids: {}", failedIds);
-            for (Long id : failedIds) {
-                pending.stream()
-                        .filter(o -> Objects.equals(o.getId(), id))
-                        .findFirst()
-                        .ifPresent(RawOpportunity::setIsInvalid);
-            }
         }
 
         List<ScreeningResult> finalResults = rawOpportunityList.stream()
@@ -126,10 +117,6 @@ public class ScreeningService {
     }
 
     private void awaitRateLimit() {
-        if (!firstRequestSent) {
-            firstRequestSent = true;
-            return;
-        }
         try {
             Thread.sleep(20000);
         } catch (InterruptedException e) {

@@ -23,7 +23,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler({CollectException.class, AiCallException.class})
     public ResponseEntity<ApiError> upstreamFailure(RuntimeException exception) {
-        return response(HttpStatus.BAD_GATEWAY, "An upstream service could not process the request");
+        return response(HttpStatus.BAD_GATEWAY, exception.getMessage());
     }
 
     @ExceptionHandler(IllegalArgumentException.class)

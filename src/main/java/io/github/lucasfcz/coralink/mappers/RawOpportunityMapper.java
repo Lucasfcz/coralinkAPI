@@ -14,7 +14,6 @@ public class RawOpportunityMapper {
                 .newsUrl(news.url())
                 .sourceName(news.sourceName())
                 .screenedRelevant(null)
-                .isInvalid(false)
                 .becameOpportunity(false)
                 .build();
     }

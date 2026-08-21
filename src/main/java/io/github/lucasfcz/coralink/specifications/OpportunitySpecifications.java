@@ -14,7 +14,7 @@ public class OpportunitySpecifications {
             Set<TargetCourseAudience> targetCourseAudiences,
             Modality modality,
             Boolean isFree,
-            Boolean isExclusive
+            Boolean isForAll
     ) {
 
         return Specification
@@ -23,7 +23,7 @@ public class OpportunitySpecifications {
                 .and(hasTargetAudiences(targetCourseAudiences))
                 .and(hasModality(modality))
                 .and(hasIsFree(isFree))
-                .and(hasIsExclusive(isExclusive));
+                .and(hasIsForALl(isForAll));
     }
 
     //this get only relevant opportunities, which are the ones that are upcoming or ongoing
@@ -62,9 +62,9 @@ public class OpportunitySpecifications {
                 : cb.equal(root.get("isFree"), isFree);
     }
 
-    private static Specification<Opportunity> hasIsExclusive(Boolean isExclusive) {
-        return (root, query, cb) -> isExclusive == null
+    private static Specification<Opportunity> hasIsForALl(Boolean isForAll) {
+        return (root, query, cb) -> isForAll == null
                 ? null
-                : cb.equal(root.get("isExclusive"), isExclusive);
+                : cb.equal(root.get("isForAll"), isForAll);
     }
 }
