@@ -81,14 +81,14 @@ public class Opportunity {
     @Column(nullable = false)
     private LocalDateTime createdAt;
 
-    @Column(name = "activated_at", nullable = false)
-    private LocalDateTime activatedAt;
+    @Column(name = "is_active", nullable = false)
+    private Boolean isActive;
 
     @Builder
     private Opportunity(RawOpportunity rawOpportunity, String summary, OpportunityType type,
                         String thematicArea, Set<TargetCourseAudience> targetCourseAudiences, Modality modality,
                         LocalDate startDate, LocalDate endDate, LocalDate registrationDeadline, String location, String officialUrl,
-                        Double confidenceScoreAi, String imageUrl, Boolean isFree, Boolean isForAll, LocalDateTime activatedAt) {
+                        Double confidenceScoreAi, String imageUrl, Boolean isFree, Boolean isForAll, Boolean isActive) {
         this.rawOpportunity = rawOpportunity;
         this.title = rawOpportunity.getTitle();
         this.summary = summary;
@@ -106,6 +106,6 @@ public class Opportunity {
         this.imageUrl = imageUrl;
         this.isFree = isFree;
         this.isForAll = isForAll;
-        this.activatedAt = activatedAt != null ? activatedAt : LocalDateTime.now();
+        this.isActive = isActive;
     }
 }

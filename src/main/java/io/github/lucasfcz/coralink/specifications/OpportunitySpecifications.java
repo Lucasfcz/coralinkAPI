@@ -35,12 +35,15 @@ public class OpportunitySpecifications {
     }
 
     // Opportunity is active if:
-    // 1) date is not null: startDate >= now() OR (endDate is not null AND endDate >= now())
-    // 2) date is null: activatedAt > now() - 45 days
+    // 1) isActive == true
+    // 2) date is not null: startDate >= now() OR (endDate is not null AND endDate >= now())
+    // 3) date is null: createdAt > now() - 45 days
     public static Specification<Opportunity> isActive() {
         return (root, query, cb) -> {
             LocalDate today = LocalDate.now();
             LocalDateTime cutoff45d = LocalDateTime.now().minusDays(45);
+
+            Predicate isActiveFlag = cb.isTrue(root.get("isActive"));
 
             Predicate hasDate = cb.isNotNull(root.get("startDate"));
             Predicate dateValid = cb.or(
@@ -55,10 +58,10 @@ public class OpportunitySpecifications {
             Predicate dateNull = cb.isNull(root.get("startDate"));
             Predicate activeWithoutDate = cb.and(
                     dateNull,
-                    cb.greaterThan(root.get("activatedAt"), cutoff45d)
+                    cb.greaterThan(root.get("createdAt"), cutoff45d)
             );
 
-            return cb.or(activeWithDate, activeWithoutDate);
+            return cb.and(isActiveFlag, cb.or(activeWithDate, activeWithoutDate));
         };
     }
 
