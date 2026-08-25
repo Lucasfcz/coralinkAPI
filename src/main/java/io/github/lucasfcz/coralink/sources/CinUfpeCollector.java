@@ -16,7 +16,7 @@ public class CinUfpeCollector extends WordPressCollector {
 
     @Override
     protected String imageFallBackUrl() {
-        return "https://imgs.search.brave.com/kubq3bDoGwCh3JGhSZYTVP6uSodLmv0-9vkZcdIp9zs/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly9wb3J0/YWwuY2luLnVmcGUu/YnIvd3AtY29udGVu/dC91cGxvYWRzLzIw/MjAvMDcvSG9yaXpv/bnRhbC1WZXJtZWxo/by1Mb2dvdGlwby1D/SW4tVUZQRS5wbmc";
+        return "https://portal.cin.ufpe.br/wp-content/uploads/2020/07/Horizontal-Vermelho-Logotipo-CIn-UFPE.png";
     }
 
     @Override

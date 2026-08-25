@@ -40,9 +40,10 @@ public abstract class WordPressCollector extends AbstractCollector {
     protected List<NewsSummary> fetchPosts(String endpoint) {
         try {
             String json = Jsoup.connect(endpoint)
+                    .sslSocketFactory(RESILIENT_SSL_SOCKET_FACTORY)
                     .ignoreContentType(true)
                     .timeout(TIMEOUT_MILLIS)
-                    .userAgent("CoralinkBot/1.0 (+https://github.com/lucasfcz/coralink)")
+                    .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
                     .execute()
                     .body();
 
@@ -98,23 +99,98 @@ public abstract class WordPressCollector extends AbstractCollector {
 
     @Override
     public DetailedContent detailedCollect(String url) {
+        // First try: Fetch full content directly from WordPress REST API using the post slug
         try {
-        Document document = requestDocument(url);
+            String slug = extractSlug(url);
+            if (!slug.isBlank()) {
+                String endpoint = baseUrl().replaceAll("/+$", "") + "/wp-json/wp/v2/posts?slug=" + slug + "&_embed=wp:featuredmedia";
+                String json = Jsoup.connect(endpoint)
+                        .sslSocketFactory(RESILIENT_SSL_SOCKET_FACTORY)
+                        .ignoreContentType(true)
+                        .timeout(TIMEOUT_MILLIS)
+                        .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+                        .execute()
+                        .body();
 
-        Element content = document.selectFirst(
-                "article .entry-content," +
-                        ".post-content," +
-                        ".colibri-post-content," +
-                        "main article," +
-                        "main"
-        );
-        if(content != null) {
-            String text = extractSummary(content);
+                JsonNode posts = OBJECT_MAPPER.readTree(json);
+                if (posts.isArray() && !posts.isEmpty()) {
+                    JsonNode post = posts.get(0);
+                    String renderedContent = post.path("content").path("rendered").asText();
+                    String text = Jsoup.parse(renderedContent).text().trim();
+                    String imageUrl = extractFeaturedImage(post);
 
-            return new DetailedContent(text, extractImage(document, content));
-        }
+                    if (!text.isBlank()) {
+                        return new DetailedContent(text, imageUrl != null && !imageUrl.isBlank() ? imageUrl : imageFallBackUrl());
+                    }
+                }
+            }
         } catch (Exception e) {
-            throw new CollectException("Failed to collect detailed content for URL: " + url, e);
+            log.debug("WordPress REST API detail fetch failed for {}, falling back to HTML parsing: {}", url, e.getMessage());
+        }
+
+        // Fallback: Parse the rendered HTML page
+        try {
+            Document document = requestDocument(url);
+            if (document != null) {
+                List<String> wpSelectors = List.of(
+                        "article .entry-content",
+                        ".entry-content",
+                        ".elementor-widget-theme-post-content",
+                        ".elementor-post__content",
+                        ".elementor-widget-container",
+                        ".post-content",
+                        ".colibri-post-content",
+                        "main article",
+                        "article",
+                        "main"
+                );
+
+                Element content = null;
+                String text = "";
+
+                for (String selector : wpSelectors) {
+                    Element candidate = document.selectFirst(selector);
+                    if (candidate != null) {
+                        String extracted = extractSummary(candidate);
+                        if (extracted.length() > 50) {
+                            content = candidate;
+                            text = extracted;
+                            break;
+                        } else if (text.isBlank() && !extracted.isBlank()) {
+                            content = candidate;
+                            text = extracted;
+                        }
+                    }
+                }
+
+                if (text.isBlank() && document.body() != null) {
+                    text = extractSummary(document.body());
+                }
+
+                if (!text.isBlank()) {
+                    return new DetailedContent(text, extractImage(document, content != null ? content : document.body()));
+                }
+            }
+        } catch (Exception e) {
+            log.error("Failed to collect detailed content from HTML for URL: {}", url, e);
+        }
+        return null;
+    }
+
+    private String extractSlug(String url) {
+        if (url == null || url.isBlank()) return "";
+        String clean = url.split("\\?")[0].split("#")[0].replaceAll("/+$", "");
+        int lastSlash = clean.lastIndexOf('/');
+        return lastSlash >= 0 ? clean.substring(lastSlash + 1) : clean;
+    }
+
+    private String extractFeaturedImage(JsonNode post) {
+        JsonNode media = post.path("_embedded").path("wp:featuredmedia");
+        if (media.isArray() && !media.isEmpty()) {
+            String sourceUrl = media.get(0).path("source_url").asText();
+            if (!sourceUrl.isBlank()) {
+                return sourceUrl;
+            }
         }
         return null;
     }

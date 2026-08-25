@@ -19,9 +19,15 @@ public class RateLimitFilter extends OncePerRequestFilter {
     private final RateLimiterService rateLimiterService;
 
     @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        String path = request.getRequestURI();
+        return path.startsWith("/swagger-ui") || path.startsWith("/v3/api-docs");
+    }
+
+    @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
                                     FilterChain chain) throws ServletException, IOException {
-        String key = request.getRemoteAddr();
+        String key = resolveClientIp(request);
         Bucket bucket = rateLimiterService.resolveBucket(key);
 
         if (bucket.tryConsume(1)) {
@@ -31,5 +37,17 @@ public class RateLimitFilter extends OncePerRequestFilter {
             response.setContentType("application/json");
             response.getWriter().write("{\"error\": \"Too many requests, try again later\"}");
         }
+    }
+
+    private String resolveClientIp(HttpServletRequest request) {
+        String xForwardedFor = request.getHeader("X-Forwarded-For");
+        if (xForwardedFor != null && !xForwardedFor.isBlank()) {
+            return xForwardedFor.split(",")[0].trim();
+        }
+        String xRealIp = request.getHeader("X-Real-IP");
+        if (xRealIp != null && !xRealIp.isBlank()) {
+            return xRealIp.trim();
+        }
+        return request.getRemoteAddr();
     }
 }

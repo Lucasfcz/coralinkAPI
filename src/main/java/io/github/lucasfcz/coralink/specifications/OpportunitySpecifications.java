@@ -2,9 +2,11 @@ package io.github.lucasfcz.coralink.specifications;
 
 import io.github.lucasfcz.coralink.enums.*;
 import io.github.lucasfcz.coralink.model.Opportunity;
+import jakarta.persistence.criteria.Predicate;
 import org.springframework.data.jpa.domain.Specification;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Set;
 
 public class OpportunitySpecifications {
@@ -18,20 +20,52 @@ public class OpportunitySpecifications {
     ) {
 
         return Specification
-                .where(isUpcomingOrOngoing())
+                .where(isActive())
                 .and(hasType(type))
                 .and(hasTargetAudiences(targetCourseAudiences))
                 .and(hasModality(modality))
                 .and(hasIsFree(isFree))
-                .and(hasIsForALl(isForAll));
+                .and(hasIsForAll(isForAll));
     }
 
-    //this get only relevant opportunities, which are the ones that are upcoming or ongoing
-    private static Specification<Opportunity> isUpcomingOrOngoing() {
-        return (root, query, cb) -> cb.or(
-                cb.isNull(root.get("startDate")),
-                cb.greaterThanOrEqualTo(root.get("startDate"), LocalDate.now())
-        );
+    public static Specification<Opportunity> activeWithTitle(String title) {
+        return Specification
+                .where(isActive())
+                .and(hasTitle(title));
+    }
+
+    // Opportunity is active if:
+    // 1) date is not null: startDate >= now() OR (endDate is not null AND endDate >= now())
+    // 2) date is null: activatedAt > now() - 45 days
+    public static Specification<Opportunity> isActive() {
+        return (root, query, cb) -> {
+            LocalDate today = LocalDate.now();
+            LocalDateTime cutoff45d = LocalDateTime.now().minusDays(45);
+
+            Predicate hasDate = cb.isNotNull(root.get("startDate"));
+            Predicate dateValid = cb.or(
+                    cb.greaterThanOrEqualTo(root.get("startDate"), today),
+                    cb.and(
+                            cb.isNotNull(root.get("endDate")),
+                            cb.greaterThanOrEqualTo(root.get("endDate"), today)
+                    )
+            );
+            Predicate activeWithDate = cb.and(hasDate, dateValid);
+
+            Predicate dateNull = cb.isNull(root.get("startDate"));
+            Predicate activeWithoutDate = cb.and(
+                    dateNull,
+                    cb.greaterThan(root.get("activatedAt"), cutoff45d)
+            );
+
+            return cb.or(activeWithDate, activeWithoutDate);
+        };
+    }
+
+    private static Specification<Opportunity> hasTitle(String title) {
+        return (root, query, cb) -> (title == null || title.isBlank())
+                ? null
+                : cb.like(cb.lower(root.get("title")), "%" + title.trim().toLowerCase() + "%");
     }
 
     private static Specification<Opportunity> hasType(OpportunityType type) {
@@ -46,7 +80,7 @@ public class OpportunitySpecifications {
                 return null;
             }
             query.distinct(true);
-            return root.join("targetAudiences").in(audiences);
+            return root.join("targetCourseAudiences").in(audiences);
         };
     }
 
@@ -62,7 +96,7 @@ public class OpportunitySpecifications {
                 : cb.equal(root.get("isFree"), isFree);
     }
 
-    private static Specification<Opportunity> hasIsForALl(Boolean isForAll) {
+    private static Specification<Opportunity> hasIsForAll(Boolean isForAll) {
         return (root, query, cb) -> isForAll == null
                 ? null
                 : cb.equal(root.get("isForAll"), isForAll);

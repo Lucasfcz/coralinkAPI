@@ -3,10 +3,8 @@ package io.github.lucasfcz.coralink.controller;
 import io.github.lucasfcz.coralink.dto.UserHelpRequest;
 import io.github.lucasfcz.coralink.dto.UserHelpResponse;
 import io.github.lucasfcz.coralink.enums.SuggestionType;
-import io.github.lucasfcz.coralink.repositories.UserHelpRepository;
 import io.github.lucasfcz.coralink.services.UserHelpService;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -22,7 +20,7 @@ public class UserHelpController {
 
     @PostMapping("/create")
     public ResponseEntity<UserHelpResponse> createUserHelp(@Valid @RequestBody UserHelpRequest request) {
-        return  ResponseEntity.ok(userHelpService.createUserHelp(request));
+        return ResponseEntity.ok(userHelpService.createUserHelp(request));
     }
 
     @GetMapping()
@@ -31,7 +29,7 @@ public class UserHelpController {
     }
 
     @GetMapping("/{type}")
-    public ResponseEntity<Page<UserHelpResponse>> getAllUserHelpByType(@RequestParam @PathVariable SuggestionType type, Pageable pageable) {
+    public ResponseEntity<Page<UserHelpResponse>> getAllUserHelpByType(@PathVariable SuggestionType type, Pageable pageable) {
         return ResponseEntity.ok(userHelpService.getUserHelpsByType(type, pageable));
     }
 }

@@ -2,11 +2,13 @@ package io.github.lucasfcz.coralink.exceptions;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.time.Instant;
 import java.util.NoSuchElementException;
+import java.util.stream.Collectors;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -24,6 +26,19 @@ public class GlobalExceptionHandler {
     @ExceptionHandler({CollectException.class, AiCallException.class})
     public ResponseEntity<ApiError> upstreamFailure(RuntimeException exception) {
         return response(HttpStatus.BAD_GATEWAY, exception.getMessage());
+    }
+
+    @ExceptionHandler(BadResponseException.class)
+    public ResponseEntity<ApiError> badResponse(BadResponseException exception) {
+        return response(HttpStatus.BAD_REQUEST, exception.getMessage());
+    }
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ApiError> validationError(MethodArgumentNotValidException exception) {
+        String details = exception.getBindingResult().getFieldErrors().stream()
+                .map(error -> error.getField() + ": " + error.getDefaultMessage())
+                .collect(Collectors.joining("; "));
+        return response(HttpStatus.BAD_REQUEST, details.isBlank() ? "Validation failed" : details);
     }
 
     @ExceptionHandler(IllegalArgumentException.class)

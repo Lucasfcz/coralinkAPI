@@ -35,28 +35,56 @@ public abstract class HtmlCollector extends AbstractCollector {
         }
     }
 
+    private static final List<String> CONTENT_SELECTORS = List.of(
+            ".asset-full-content",
+            ".asset-content",
+            "article .entry-content",
+            ".entry-content",
+            ".post-content",
+            ".news-content",
+            ".noticia-corpo",
+            ".conteudo-noticia",
+            "main article",
+            "article",
+            "main",
+            ".journal-content-article"
+    );
+
     @Override
     public DetailedContent detailedCollect(String url) {
         try {
             Document document = requestDocument(url);
-
-            Element content = document.selectFirst(
-                    ".journal-content-article," +
-                            ".asset-full-content," +
-                            "article .entry-content," +
-                            ".content," +
-                            ".post-content," +
-                            "main article," +
-                            "main"
-            );
-            if (content != null) {
-                String text = extractSummary(content);
-                return new DetailedContent(text, extractImage(document, content));
+            if (document == null) {
+                return null;
             }
-        }
-        catch (Exception e) {
+
+            Element content = null;
+            String text = "";
+
+            for (String selector : CONTENT_SELECTORS) {
+                Element candidate = document.selectFirst(selector);
+                if (candidate != null) {
+                    String extracted = extractSummary(candidate);
+                    if (extracted.length() > 50) {
+                        content = candidate;
+                        text = extracted;
+                        break;
+                    } else if (text.isBlank() && !extracted.isBlank()) {
+                        content = candidate;
+                        text = extracted;
+                    }
+                }
+            }
+
+            if (text.isBlank() && document.body() != null) {
+                text = extractSummary(document.body());
+            }
+
+            if (!text.isBlank()) {
+                return new DetailedContent(text, extractImage(document, content != null ? content : document.body()));
+            }
+        } catch (Exception e) {
             log.error("Failed to collect detailed content for URL: {}", url, e);
-            return new DetailedContent("", null);
         }
         return null;
     }
