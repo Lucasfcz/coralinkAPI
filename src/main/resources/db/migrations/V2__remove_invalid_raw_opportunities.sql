@@ -1,2 +1,0 @@
-ALTER table raw_opportunities
-DROP is_invalid

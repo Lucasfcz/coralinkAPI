@@ -2,13 +2,14 @@ package io.github.lucasfcz.coralink.model;
 
 import io.github.lucasfcz.coralink.enums.SuggestionType;
 import jakarta.persistence.*;
-import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Size;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
+@Table(name = "user_help")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class UserHelp {
@@ -22,8 +23,8 @@ public class UserHelp {
     @Enumerated(EnumType.STRING)
     private SuggestionType type;
 
-    @Column(nullable = false)
-    @Max(5000)
+    @Column(columnDefinition = "TEXT", nullable = false)
+    @Size(max = 5000)
     private String suggestion;
 
     @Column

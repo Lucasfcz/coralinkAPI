@@ -49,7 +49,7 @@ public class ExtractionService {
         
         Regras para Enums:
         - NUNCA crie novos enums utilize apenas os que estao presentes nas classes: OpportunityType, Modality, TargetCourseAudience
-        - Caso nao acredite que nenhum dos enums presentes nas classes acima se encaixe perfeitamente na oportunidade, considere como OTHER em OpportunityType e STUDENTS_IN_GENERAL em TargetCourseAudience.
+        - Caso nao acredite que nenhum dos enums presentes nas classes acima se encaixe perfeitamente na oportunidade, considere como OTHER em OpportunityType e UNIVERSITY_STUDENTS em TargetCourseAudience.
         - Para o modality veja se a oportunidade acontece presencialmente, online ou hibrido e classifique de acordo com a classe Modality usando os enums: ONLINE, IN_PERSON ou HYBRID.
 
         Regras para o isForAll:
@@ -77,7 +77,7 @@ public class ExtractionService {
           "summary": "Resumo da oportunidade",
           "type": "COURSE",
           "thematicArea": "Desenvolvimento Web",
-          "targetCourseAudiences": ["ADS", "COMPUTER_SCIENCE", "SOFTWARE_ENGINEERING", "INFORMATION_SYSTEMS", "COMPUTER_ENGINEERING, "TECHNOLOGY_STUDENTS"],
+          "targetCourseAudiences": ["ADS", "COMPUTER_SCIENCE", "SOFTWARE_ENGINEERING", "INFORMATION_SYSTEMS", "COMPUTER_ENGINEERING", "TECHNOLOGY_STUDENTS"],
           "modality": "ONLINE",
           "startDate": "2026-08-03",
           "endDate": "2026-08-07",
@@ -177,7 +177,7 @@ public class ExtractionService {
                 || r.rawOpportunityId() == null
                 || r.summary() == null || r.summary().isBlank()
                 || r.type() == null
-                || r.thematicArea().isBlank()
+                || r.thematicArea() == null || r.thematicArea().isBlank()
                 || r.targetCourseAudiences() == null
                 || r.confidenceScore() == null
                 || r.confidenceScore() < 0

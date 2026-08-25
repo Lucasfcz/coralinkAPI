@@ -22,7 +22,7 @@ public class UnibraCollector extends HtmlCollector {
 
     @Override
     protected String imageFallBackUrl() {
-        return "https://imgs.search.brave.com/4aqO1n174m5CNng9b0o3ftneuGkT61O0ed7tdG2yvHg/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly9jZG4u/Zm9saGFwZS5jb20u/YnIvdXBsb2FkL2Ru/X2FycXVpdm8vMjAy/Mi8wNS9kZXNpZ24t/c2VtLW5vbWUtMjcu/anBn";
+        return "https://eventos.grupounibra.com/img/logo-unibra.png";
     }
 
     @Override

@@ -24,10 +24,9 @@ public class OpportunityController {
             @RequestParam(required = false) Set<TargetCourseAudience> targetCourseAudience,
             @RequestParam(required = false) Modality modality,
             @RequestParam(required = false) Boolean isFree,
-            @RequestParam(required = false) Boolean isExclusive,
+            @RequestParam(required = false) Boolean isForAll,
             Pageable pageable) {
-        return ResponseEntity.ok(opportunityService.getRelevantOpportunities(type, targetCourseAudience, modality, isFree, isExclusive, pageable));
-
+        return ResponseEntity.ok(opportunityService.getRelevantOpportunities(type, targetCourseAudience, modality, isFree, isForAll, pageable));
     }
 
     @GetMapping("/search")

@@ -35,7 +35,7 @@ public class PipelineService {
     private final List<Collector> collectors;
 
     @Scheduled(fixedDelayString = "${coralink.scheduler.source-check-rate-ms}")
-    @CacheEvict(value = "opportunities", allEntries = true)
+    @CacheEvict(value = {"opportunities", "opportunities_count"}, allEntries = true)
     public PipelineRunResult runFullPipeline() {
         Instant start = Instant.now();
         log.info("Pipeline started");
@@ -126,7 +126,10 @@ public class PipelineService {
         for (RawOpportunity raw : rawOpportunities) {
             try {
                 Collector collector = resolveCollector(raw.getSourceName());
-                contents.put(raw.getId(), collector.detailedCollect(raw.getNewsUrl()));
+                DetailedContent detail = collector.detailedCollect(raw.getNewsUrl());
+                if (detail != null && detail.fullContent() != null && !detail.fullContent().isBlank()) {
+                    contents.put(raw.getId(), detail);
+                }
             } catch (RuntimeException exception) {
                 log.error("Failed to collect detail for raw opportunity {}", raw.getId(), exception);
             }

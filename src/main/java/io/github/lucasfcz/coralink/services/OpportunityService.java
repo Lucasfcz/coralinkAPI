@@ -13,6 +13,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Set;
 
 @Service
@@ -22,23 +23,24 @@ public class OpportunityService {
     private final OpportunityRepository opportunityRepository;
     private final OpportunityMapper opportunityMapper;
 
-    // only get relevant opportunities that are upcoming or ongoing, and apply filters if provided
-    @Cacheable(value = "opportunities", key = "{#type, #targetCourseAudiences, #modality, #isFree, #isExclusive, #pageable}")
+    // only get relevant opportunities that are active in real-time, and apply filters if provided
+    @Cacheable(value = "opportunities", key = "{#type, #targetCourseAudiences, #modality, #isFree, #isForAll, #pageable}")
     public Page<OpportunityResponse> getRelevantOpportunities(
             OpportunityType type,
             Set<TargetCourseAudience> targetCourseAudiences,
             Modality modality,
             Boolean isFree,
-            Boolean isExclusive,
+            Boolean isForAll,
             Pageable pageable) {
 
-        var spec = OpportunitySpecifications.filters(type, targetCourseAudiences, modality, isFree, isExclusive);
+        var spec = OpportunitySpecifications.filters(type, targetCourseAudiences, modality, isFree, isForAll);
 
         return opportunityRepository.findAll(spec, pageable).map(opportunityMapper::toResponse);
     }
 
     public Page<OpportunityResponse> getOpportunitiesByTitle(String title, Pageable pageable) {
-        return opportunityRepository.findOpportunitiesByTitleContainsIgnoreCase(title, pageable).map(opportunityMapper::toResponse);
+        var spec = OpportunitySpecifications.activeWithTitle(title);
+        return opportunityRepository.findAll(spec, pageable).map(opportunityMapper::toResponse);
     }
 
     public OpportunityResponse getOpportunityById(Long id) {
@@ -47,8 +49,8 @@ public class OpportunityService {
                 .orElseThrow(() -> new NotFoundException("Not found opportunity if id: " + id));
     }
 
-    @Cacheable(value = "opportunities")
+    @Cacheable(value = "opportunities_count")
     public int howManyOpportunitiesAreUpcoming() {
-        return opportunityRepository.countAllByStartDateAfter(LocalDate.now());
+        return opportunityRepository.countActiveOpportunities(LocalDate.now(), LocalDateTime.now().minusDays(45));
     }
 }

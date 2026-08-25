@@ -6,6 +6,8 @@ import io.github.lucasfcz.coralink.model.Opportunity;
 import io.github.lucasfcz.coralink.model.RawOpportunity;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDateTime;
+
 @Component
 public class OpportunityMapper {
     public Opportunity toEntity(RawOpportunity raw, ExtractionResult result, String imageUrl) {
@@ -25,6 +27,7 @@ public class OpportunityMapper {
                 .imageUrl(imageUrl)
                 .isFree(result.isFree())
                 .isForAll(result.isForAll())
+                .activatedAt(LocalDateTime.now())
                 .build();
     }
 
