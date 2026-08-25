@@ -23,7 +23,7 @@ public class UserHelpController {
         return ResponseEntity.ok(userHelpService.createUserHelp(request));
     }
 
-    @GetMapping
+    @GetMapping()
     public ResponseEntity<Page<UserHelpResponse>> getAllUserHelp(Pageable pageable) {
         return ResponseEntity.ok(userHelpService.findAllUserHelp(pageable));
     }
