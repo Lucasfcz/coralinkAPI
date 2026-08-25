@@ -25,8 +25,11 @@ public interface OpportunityRepository extends JpaRepository<Opportunity, Long>,
 
     @Query("""
         SELECT COUNT(o) FROM Opportunity o
-        WHERE (o.startDate IS NOT NULL AND (o.startDate >= :today OR (o.endDate IS NOT NULL AND o.endDate >= :today)))
-           OR (o.startDate IS NULL AND o.activatedAt > :cutoff45d)
+        WHERE o.isActive = true
+          AND (
+            (o.startDate IS NOT NULL AND (o.startDate >= :today OR (o.endDate IS NOT NULL AND o.endDate >= :today)))
+            OR (o.startDate IS NULL AND o.createdAt > :cutoff45d)
+          )
     """)
     int countActiveOpportunities(@Param("today") LocalDate today, @Param("cutoff45d") LocalDateTime cutoff45d);
 }
