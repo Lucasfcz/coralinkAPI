@@ -20,5 +20,6 @@ public record ExtractionResult(
         @NotNull String location,
         @NotNull Boolean isFree,
         @NotNull Boolean isForAll,
+        String imageUrl,
         @NotNull Double confidenceScore
 ) {}

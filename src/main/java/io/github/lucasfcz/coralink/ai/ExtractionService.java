@@ -12,6 +12,11 @@ import org.springframework.stereotype.Service;
 
 import java.util.*;
 
+/**
+ * Serviço de Extração (Fase 2 do Pipeline).
+ * Envia o conteúdo detalhado de oportunidades triadas positivamente para o modelo de IA (Google Gemini)
+ * para extrair campos estruturados (datas, público-alvo, modalidade, gratuidade, etc.).
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -54,6 +59,10 @@ public class ExtractionService {
 
         Regras para o isForAll:
         - ele se diz respeito a oportunidades exclusivas para estudantes da propria faculdade, caso seja aberto ao publico geral considere isForAll = true, caso seja exclusivo para os estudantes da faculdade considere isForAll = false;
+
+        Regras para imageUrl:
+        - Extraia a URL da imagem principal da oportunidade (banner, cartaz ou capa do evento/noticia) presente no texto/conteúdo fornecido (inclusive se estiver em formato markdown ![...](url) ou links de imagem).
+        - Caso o conteúdo não possua imagem ou não haja imagem condizente com a oportunidade, use null.
         
         Regras para datas:
         - Use o formato ISO yyyy-MM-dd.
@@ -85,6 +94,7 @@ public class ExtractionService {
           "location": "Centro do Recife",
           "isFree": true,
           "isForAll": false,
+          "imageUrl": "https://example.com/banner.png",
           "confidenceScore": 0.95
         }
 
@@ -93,10 +103,10 @@ public class ExtractionService {
 
     public ExtractionBatchResult extract(List<RawOpportunity> rawOpportunities, Map<Long, DetailedContent> contentsById) {
         if (rawOpportunities == null || rawOpportunities.isEmpty()) {
-            throw new BadResponseException("At least one raw opportunity is required for extraction");
+            throw new BadResponseException("É necessária pelo menos uma oportunidade bruta para extração");
         }
         if (rawOpportunities.stream().anyMatch(o -> !Boolean.TRUE.equals(o.getScreenedRelevant()))) {
-            throw new BadResponseException("Only opportunities screened as relevant can be extracted");
+            throw new BadResponseException("Apenas oportunidades triadas como relevantes podem ser extraídas");
         }
 
         List<ExtractionResult> results = new ArrayList<>();
@@ -105,9 +115,9 @@ public class ExtractionService {
         for (RawOpportunity rawOpportunity : rawOpportunities) {
             DetailedContent content = contentsById.get(rawOpportunity.getId());
 
-            // don't throw an exception if found a bad detailed content, had to continue with others
+            // Não interrompe o processamento caso um conteúdo detalhado esteja ausente ou vazio; avança para os próximos itens
             if (rawOpportunity.getId() == null || content == null || content.fullContent() == null || content.fullContent().isBlank()) {
-                log.warn("Skipping raw opportunity {} — missing id or detailed content", rawOpportunity.getId());
+                log.warn("Ignorando oportunidade bruta {} — ID ausente ou conteúdo detalhado vazio", rawOpportunity.getId());
                 failedIds.add(rawOpportunity.getId());
                 continue;
             }
@@ -121,7 +131,7 @@ public class ExtractionService {
         }
 
         if (!failedIds.isEmpty()) {
-            log.error("Unable to extract {} opportunities after {} attempts each. Ids: {}", failedIds.size(), MAX_RETRIES_PER_ITEM, failedIds);
+            log.error("Não foi possível extrair {} oportunidades após {} tentativas cada. IDs: {}", failedIds.size(), MAX_RETRIES_PER_ITEM, failedIds);
         }
 
         return new ExtractionBatchResult(results);
@@ -134,25 +144,29 @@ public class ExtractionService {
                 ExtractionResult result = sendExtractionRequest(rawOpportunity, content);
 
                 if (isInvalid(result) || !Objects.equals(result.rawOpportunityId(), rawOpportunity.getId())) {
-                    log.warn("Invalid extraction result for raw opportunity {} on attempt {}/{}", rawOpportunity.getId(), attempt, MAX_RETRIES_PER_ITEM);
+                    log.warn("Resultado de extração inválido para a oportunidade bruta {} na tentativa {}/{}", rawOpportunity.getId(), attempt, MAX_RETRIES_PER_ITEM);
                     continue;
                 }
 
                 return result;
 
             } catch (RuntimeException e) {
-                log.warn("Extraction call failed for raw opportunity {} on attempt {}/{}", rawOpportunity.getId(), attempt, MAX_RETRIES_PER_ITEM, e);
+                log.warn("Falha na chamada de extração da oportunidade bruta {} na tentativa {}/{}: {}", rawOpportunity.getId(), attempt, MAX_RETRIES_PER_ITEM, e.getMessage());
             }
         }
         return null;
     }
 
+    /**
+     * Pausa preventiva de 20 segundos para não ultrapassar o limite de requisições por minuto (RPM)
+     * da cota gratuita da API do Google Gemini (15 RPM), prevenindo falhas de rate limit HTTP 429.
+     */
     private void awaitRateLimit() {
         try {
             Thread.sleep(20000);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new AiCallException("Interrupted while waiting between AI requests", e);
+            throw new AiCallException("Thread interrompida durante espera entre requisições à IA", e);
         }
     }
 
@@ -166,7 +180,7 @@ public class ExtractionService {
         );
 
         if (response == null) {
-            throw new AiCallException("AI returned no extraction result");
+            throw new AiCallException("A IA não retornou resultado de extração");
         }
 
         return response;

@@ -16,6 +16,9 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Set;
 
+/**
+ * Serviço responsável pela consulta, filtragem dinâmica e paginação de oportunidades ativas para os estudantes.
+ */
 @Service
 @RequiredArgsConstructor
 public class OpportunityService {
@@ -23,7 +26,7 @@ public class OpportunityService {
     private final OpportunityRepository opportunityRepository;
     private final OpportunityMapper opportunityMapper;
 
-    // only get relevant opportunities that are active in real-time, and apply filters if provided
+    // Retorna apenas oportunidades ativas segundo a regra temporal de vigência, aplicando filtros dinâmicos via JPA Specification.
     @Cacheable(value = "opportunities", key = "{#type, #targetCourseAudiences, #modality, #isFree, #isForAll, #pageable}")
     public Page<OpportunityResponse> getRelevantOpportunities(
             OpportunityType type,
@@ -46,11 +49,16 @@ public class OpportunityService {
     public OpportunityResponse getOpportunityById(Long id) {
         return opportunityRepository.findById(id)
                 .map(opportunityMapper::toResponse)
-                .orElseThrow(() -> new NotFoundException("Not found opportunity if id: " + id));
+                .orElseThrow(() -> new NotFoundException("Oportunidade não encontrada com o id: " + id));
     }
 
     @Cacheable(value = "opportunities_count")
     public int howManyOpportunitiesAreUpcoming() {
-        return opportunityRepository.countActiveOpportunities(LocalDate.now(), LocalDateTime.now().minusDays(45));
+        return opportunityRepository.countActiveOpportunities(
+                LocalDate.now(),
+                LocalDate.now().minusDays(3),
+                LocalDateTime.now().minusDays(45)
+        );
     }
 }
+

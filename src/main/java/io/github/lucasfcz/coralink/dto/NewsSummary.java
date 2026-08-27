@@ -6,8 +6,11 @@ import jakarta.validation.constraints.NotNull;
 
 import java.time.LocalDateTime;
 
-//dto responsible for first scraping and get new news
+/**
+ * DTO que representa o resumo preliminar de uma notícia/evento coletado na primeira etapa de scraping.
+ */
 public record NewsSummary(
+
         @NotBlank String title,
         @NotBlank String shortSummary,
         @NotBlank String url,

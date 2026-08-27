@@ -34,16 +34,30 @@ public class OpportunitySpecifications {
                 .and(hasTitle(title));
     }
 
-    // Opportunity is active if:
-    // 1) isActive == true
-    // 2) date is not null: startDate >= now() OR (endDate is not null AND endDate >= now())
-    // 3) date is null: createdAt > now() - 45 days
+    /**
+     * Regra de uma oportunidade ativa:
+     * 1) Boolean isActive == true (controle administrativo direto)
+     * 2) Se houver prazo de inscrição (registrationDeadline != null):
+     *    -> Prioridade absoluta: prazo de inscrição deve ser >= hoje - 3 dias (tolerância pós-encerramento).
+     * 3) Se NÃO houver prazo de inscrição (registrationDeadline == null):
+     *    a) Se houver data de início (startDate != null):
+     *       -> startDate >= hoje OU (endDate != null E endDate >= hoje).
+     *    b) Se NÃO houver data de início (startDate == null):
+     *       -> Considera-se ativa se publicada nos últimos 45 dias (createdAt > hoje - 45 dias).
+     */
     public static Specification<Opportunity> isActive() {
+
         return (root, query, cb) -> {
             LocalDate today = LocalDate.now();
+            LocalDate deadlineCutoff = today.minusDays(3);
             LocalDateTime cutoff45d = LocalDateTime.now().minusDays(45);
 
             Predicate isActiveFlag = cb.isTrue(root.get("isActive"));
+
+            Predicate activeWhenHasDeadline = cb.and(
+                    cb.isNotNull(root.get("registrationDeadline")),
+                    cb.greaterThanOrEqualTo(root.get("registrationDeadline"), deadlineCutoff)
+            );
 
             Predicate hasDate = cb.isNotNull(root.get("startDate"));
             Predicate dateValid = cb.or(
@@ -55,13 +69,17 @@ public class OpportunitySpecifications {
             );
             Predicate activeWithDate = cb.and(hasDate, dateValid);
 
-            Predicate dateNull = cb.isNull(root.get("startDate"));
             Predicate activeWithoutDate = cb.and(
-                    dateNull,
+                    cb.isNull(root.get("startDate")),
                     cb.greaterThan(root.get("createdAt"), cutoff45d)
             );
 
-            return cb.and(isActiveFlag, cb.or(activeWithDate, activeWithoutDate));
+            Predicate activeWhenNoDeadline = cb.and(
+                    cb.isNull(root.get("registrationDeadline")),
+                    cb.or(activeWithDate, activeWithoutDate)
+            );
+
+            return cb.and(isActiveFlag, cb.or(activeWhenHasDeadline, activeWhenNoDeadline));
         };
     }
 

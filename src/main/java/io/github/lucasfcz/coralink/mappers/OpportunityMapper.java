@@ -8,7 +8,11 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class OpportunityMapper {
-    public Opportunity toEntity(RawOpportunity raw, ExtractionResult result, String imageUrl) {
+    public Opportunity toEntity(RawOpportunity raw, ExtractionResult result, String fallbackImageUrl) {
+        String resolvedImageUrl = (result.imageUrl() != null && !result.imageUrl().isBlank())
+                ? result.imageUrl().trim()
+                : fallbackImageUrl;
+
         return Opportunity.builder()
                 .rawOpportunity(raw)
                 .summary(result.summary())
@@ -22,7 +26,7 @@ public class OpportunityMapper {
                 .location(result.location())
                 .officialUrl(raw.getNewsUrl())
                 .confidenceScoreAi(result.confidenceScore())
-                .imageUrl(imageUrl)
+                .imageUrl(resolvedImageUrl)
                 .isFree(result.isFree())
                 .isForAll(result.isForAll())
                 .isActive(true)

@@ -1,6 +1,5 @@
 package io.github.lucasfcz.coralink.services;
 
-import io.github.lucasfcz.coralink.dto.DetailedContent;
 import io.github.lucasfcz.coralink.dto.ExtractionResult;
 import io.github.lucasfcz.coralink.dto.ScreeningResult;
 import io.github.lucasfcz.coralink.mappers.OpportunityMapper;
@@ -11,10 +10,15 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-//this class is separated from Pipeline Service to use @Transational in methods
+/**
+ * Serviço de persistência transacional do pipeline.
+ * Isolado do PipelineService para permitir o controle transacional granular (@Transactional)
+ * em cada etapa (triagem e persistência de oportunidade), evitando que falhas individuais abortem a esteira completa.
+ */
 @Service
 @RequiredArgsConstructor
 public class PipelinePersistenceService {
+
 
     private final RawOpportunityRepository rawOpportunityRepository;
     private final OpportunityRepository opportunityRepository;
@@ -27,8 +31,8 @@ public class PipelinePersistenceService {
     }
 
     @Transactional
-    public void saveOpportunity(RawOpportunity raw, ExtractionResult result, DetailedContent content) {
-        opportunityRepository.save(opportunityMapper.toEntity(raw, result, content.imageUrl()));
+    public void saveOpportunity(RawOpportunity raw, ExtractionResult result, String fallbackImageUrl) {
+        opportunityRepository.save(opportunityMapper.toEntity(raw, result, fallbackImageUrl));
         raw.markAsOpportunity();
         rawOpportunityRepository.save(raw);
     }

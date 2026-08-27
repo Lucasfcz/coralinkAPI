@@ -33,11 +33,13 @@ public class RawOpportunity {
     @Column(nullable = false, name = "source_name")
     private SourceName sourceName;
 
-    // result of AI screening, null until screening occurs
+    // Resultado da triagem por IA (Fase 1). Permanece null até a triagem ser executada.
     private Boolean screenedRelevant;
 
+    // Indica se a notícia bruta avançou na Fase 2 e foi promovida a uma Oportunidade oficial.
     @Column(nullable = false)
-    private Boolean becameOpportunity; // became an Opportunity after phase 2?
+    private Boolean becameOpportunity;
+
 
     @CreationTimestamp
     @Column(nullable = false)

@@ -106,7 +106,8 @@ public class PipelineService {
             for (ExtractionResult result : response.extractionResults()) {
                 try {
                     RawOpportunity raw = byId.get(result.rawOpportunityId());
-                    persistenceService.saveOpportunity(raw, result, contents.get(raw.getId()));
+                    Collector collector = resolveCollector(raw.getSourceName());
+                    persistenceService.saveOpportunity(raw, result, collector.fallbackImageUrl());
                     successes++;
                 } catch (RuntimeException exception) {
                     failures++;

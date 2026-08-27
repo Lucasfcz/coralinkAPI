@@ -10,4 +10,5 @@ public interface Collector {
     SourceName sourceName();
     List<NewsSummary> collect();
     DetailedContent detailedCollect(String newsUrl);
+    String fallbackImageUrl();
 }
