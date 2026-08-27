@@ -4,8 +4,13 @@ import io.github.lucasfcz.coralink.enums.SourceName;
 import io.github.lucasfcz.coralink.sources.collector.WordPressCollector;
 import org.springframework.stereotype.Component;
 
+/**
+ * Coletor oficial para notícias do Centro de Informática da UFPE (CIn-UFPE).
+ * Exclui a categoria 1 (geral/não categorizado) para priorizar eventos e editais acadêmicos.
+ */
 @Component
 public class CinUfpeCollector extends WordPressCollector {
+
 
     private static final String BASE_URL = "https://portal.cin.ufpe.br";
 
@@ -21,7 +26,7 @@ public class CinUfpeCollector extends WordPressCollector {
 
     @Override
     protected String postsEndpoint() {
-        return BASE_URL + "/wp-json/wp/v2/posts?per_page=20&categories_exclude=1&_embed=wp:featuredmedia";
+        return BASE_URL + "/wp-json/wp/v2/posts?per_page=20&categories_exclude=1";
     }
 
     @Override

@@ -9,8 +9,28 @@ import org.jsoup.nodes.Element;
 import java.util.List;
 import java.util.Objects;
 
+/**
+ * Coletor base para páginas HTML tradicionais (scraping via Jsoup).
+ * Itera sobre seletores comuns de conteúdo editorial acadêmico para extrair texto e imagem limpos.
+ */
 @Slf4j
 public abstract class HtmlCollector extends AbstractCollector {
+
+    private static final List<String> CONTENT_SELECTORS = List.of(
+            ".asset-full-content",
+            ".asset-content",
+            "article .entry-content",
+            ".entry-content",
+            ".post-content",
+            ".news-content",
+            ".noticia-corpo",
+            ".conteudo-noticia",
+            ".event-description",
+            "main article",
+            "article",
+            "main",
+            ".journal-content-article"
+    );
 
     protected abstract String pageUrl();
 
@@ -22,33 +42,20 @@ public abstract class HtmlCollector extends AbstractCollector {
     public List<NewsSummary> collect() {
         try {
             Document document = requestDocument(pageUrl());
+            if (document == null) {
+                return List.of();
+            }
 
             return articles(document)
                     .stream()
                     .map(this::mapArticle)
                     .filter(Objects::nonNull)
                     .toList();
-        }
-        catch (Exception e) {
-            log.error("Failed to collect news summaries from URL: {}", pageUrl(), e);
+        } catch (Exception e) {
+            log.error("Falha ao coletar resumos de notícias da URL: {}", pageUrl(), e);
             return List.of();
         }
     }
-
-    private static final List<String> CONTENT_SELECTORS = List.of(
-            ".asset-full-content",
-            ".asset-content",
-            "article .entry-content",
-            ".entry-content",
-            ".post-content",
-            ".news-content",
-            ".noticia-corpo",
-            ".conteudo-noticia",
-            "main article",
-            "article",
-            "main",
-            ".journal-content-article"
-    );
 
     @Override
     public DetailedContent detailedCollect(String url) {
@@ -58,7 +65,6 @@ public abstract class HtmlCollector extends AbstractCollector {
                 return null;
             }
 
-            Element content = null;
             String text = "";
 
             for (String selector : CONTENT_SELECTORS) {
@@ -66,12 +72,8 @@ public abstract class HtmlCollector extends AbstractCollector {
                 if (candidate != null) {
                     String extracted = extractSummary(candidate);
                     if (extracted.length() > 50) {
-                        content = candidate;
                         text = extracted;
                         break;
-                    } else if (text.isBlank() && !extracted.isBlank()) {
-                        content = candidate;
-                        text = extracted;
                     }
                 }
             }
@@ -81,10 +83,10 @@ public abstract class HtmlCollector extends AbstractCollector {
             }
 
             if (!text.isBlank()) {
-                return new DetailedContent(text, extractImage(document, content != null ? content : document.body()));
+                return new DetailedContent(text);
             }
         } catch (Exception e) {
-            log.error("Failed to collect detailed content for URL: {}", url, e);
+            log.error("Falha ao coletar conteúdo detalhado para URL: {}", url, e);
         }
         return null;
     }

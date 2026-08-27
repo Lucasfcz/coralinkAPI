@@ -12,6 +12,11 @@ import org.springframework.stereotype.Service;
 import java.util.*;
 import java.util.stream.Collectors;
 
+/**
+ * Serviço de Triagem (Fase 1 do Pipeline).
+ * Utiliza o modelo de IA (Google Gemini) para classificar se os resumos brutos de notícias
+ * coletados possuem pertinência prática (Categoria A: oportunidades ativas / Categoria B: avisos acadêmicos).
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -73,7 +78,7 @@ public class ScreeningService {
 
     public ScreeningBatchResult screen(List<RawOpportunity> rawOpportunityList) {
         if (rawOpportunityList == null || rawOpportunityList.isEmpty()) {
-            throw new BadResponseException("At least one raw opportunity is required for screening");
+            throw new BadResponseException("É necessária pelo menos uma oportunidade bruta para triagem");
         }
 
         Map<Long, ScreeningResult> resolved = new LinkedHashMap<>();
@@ -98,11 +103,13 @@ public class ScreeningService {
 
         if (!pending.isEmpty()) {
             List<Long> failedIds = pending.stream().map(RawOpportunity::getId).toList();
-            log.error("Unable to obtain valid screening after " + MAX_RETRIES + " attempts for raw opportunity ids: {}", failedIds);
+            log.error("Não foi possível obter triagem válida após {} tentativas para os IDs brutos: {}", MAX_RETRIES, failedIds);
         }
 
+        // Mapeia os resultados garantindo que elementos não classificados não gerem NullPointerException
         List<ScreeningResult> finalResults = rawOpportunityList.stream()
                 .map(o -> resolved.get(o.getId()))
+                .filter(Objects::nonNull)
                 .toList();
 
         return new ScreeningBatchResult(finalResults);
@@ -116,12 +123,16 @@ public class ScreeningService {
         return batches;
     }
 
+    /**
+     * Pausa preventiva de 20 segundos para não ultrapassar o limite de requisições por minuto (RPM)
+     * da cota gratuita da API do Google Gemini (15 RPM), prevenindo falhas de rate limit HTTP 429.
+     */
     private void awaitRateLimit() {
         try {
             Thread.sleep(20000);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new AiCallException("Interrupted while waiting between AI batch requests", e);
+            throw new AiCallException("Thread interrompida durante espera entre requisições em lote à IA", e);
         }
     }
 
@@ -137,8 +148,8 @@ public class ScreeningService {
                 %s
                 """.formatted(opportunitiesBlock);
 
-        log.info("Prompt chars: {}", userPrompt.length());
-        log.info("quantity of opportunities: {}", rawOpportunities.size());
+        log.info("Caracteres do prompt: {}", userPrompt.length());
+        log.info("Quantidade de oportunidades no lote: {}", rawOpportunities.size());
 
         ScreeningBatchResult result = aiClient.sendPrompt(
                 SYSTEM_PROMPT,
@@ -147,7 +158,7 @@ public class ScreeningService {
         );
 
         if (result == null || result.screeningResults() == null) {
-            throw new AiCallException("AI returned no screening results");
+            throw new AiCallException("A IA não retornou resultados de triagem");
         }
 
         return result;
@@ -155,13 +166,23 @@ public class ScreeningService {
 
     private List<ScreeningResult> getScreenInvalidResults(ScreeningBatchResult result) {
         List<ScreeningResult> results = result.screeningResults();
+        if (results == null) return List.of();
+
+        Set<Long> seenIds = new HashSet<>();
+        Set<Long> duplicateIds = new HashSet<>();
+        for (ScreeningResult r : results) {
+            if (r != null && r.rawOpportunityId() != null) {
+                if (!seenIds.add(r.rawOpportunityId())) {
+                    duplicateIds.add(r.rawOpportunityId());
+                }
+            }
+        }
 
         return results.stream()
                 .filter(r -> r == null
                         || r.rawOpportunityId() == null
                         || r.isRelevant() == null
-                        || results.stream().anyMatch(other -> other != r
-                        && Objects.equals(other.rawOpportunityId(), r.rawOpportunityId())))
+                        || duplicateIds.contains(r.rawOpportunityId()))
                 .toList();
     }
 

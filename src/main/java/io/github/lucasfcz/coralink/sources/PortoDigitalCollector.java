@@ -1,23 +1,37 @@
 package io.github.lucasfcz.coralink.sources;
 
-import io.github.lucasfcz.coralink.dto.DetailedContent;
+import com.fasterxml.jackson.databind.JsonNode;
 import io.github.lucasfcz.coralink.dto.NewsSummary;
 import io.github.lucasfcz.coralink.enums.SourceName;
-import io.github.lucasfcz.coralink.sources.collector.HtmlCollector;
+import io.github.lucasfcz.coralink.sources.collector.StoryblokCollector;
 import lombok.extern.slf4j.Slf4j;
-import org.jsoup.nodes.Document;
-import org.jsoup.nodes.Element;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
-import java.util.List;
 
+/**
+ * Coletor oficial para notícias e eventos do ecossistema do Porto Digital (Recife Antigo).
+ * O portal do Porto Digital utiliza Nuxt.js/Vue (SPA) com Storyblok Headless CMS;
+ * a coleta é realizada diretamente na CDN da API do Storyblok com token público de leitura.
+ */
 @Slf4j
 @Component
-public class PortoDigitalCollector extends HtmlCollector {
+public class PortoDigitalCollector extends StoryblokCollector {
 
     private static final String BASE_URL = "https://www.portodigital.org";
-    private static final String NEWS_URL = BASE_URL + "/noticias";
+    private static final String FALLBACK_IMAGE_URL = "https://www.portodigital.org/_nuxt/img/logo.5417d9c.svg";
+
+    @Value("${coralink.sources.porto-digital.token:Tgr62GfKdVlaQrQerwtKtgtt}")
+    private String apiToken;
+
+    public PortoDigitalCollector() {
+        this.apiToken = "Tgr62GfKdVlaQrQerwtKtgtt";
+    }
+
+    public PortoDigitalCollector(String apiToken) {
+        this.apiToken = apiToken;
+    }
 
     @Override
     protected String baseUrl() {
@@ -26,77 +40,23 @@ public class PortoDigitalCollector extends HtmlCollector {
 
     @Override
     protected String imageFallBackUrl() {
-        return "https://www.portodigital.org/_nuxt/img/logo.5417d9c.svg";
+        return FALLBACK_IMAGE_URL;
     }
 
     @Override
-    protected String pageUrl() {
-        return NEWS_URL;
+    protected String apiToken() {
+        return this.apiToken;
     }
 
     @Override
-    protected List<Element> articles(Document document) {
-        if (document == null) return List.of();
-
-        return document.select("a[href^='/noticias/'], a[href^='" + BASE_URL + "/noticias/']")
-                .stream()
-                .filter(link -> {
-                    String url = link.absUrl("href");
-
-                    return !url.equals(NEWS_URL)
-                            && !url.equals(NEWS_URL + "/")
-                            && !link.text().isBlank();
-                })
-                .toList();
+    protected String storiesEndpoint() {
+        return "https://api.storyblok.com/v1/cdn/stories?token=" + apiToken()
+                + "&version=published&starts_with=noticias&sort_by=content.post_date:desc&per_page=20";
     }
 
     @Override
-    protected NewsSummary mapArticle(Element articleLink) {
-        String title = articleLink.text().trim();
-        String url = articleLink.absUrl("href");
-
-        if (title.isBlank() || url.isBlank()) {
-            return null;
-        }
-
-        // Clean up common button text inside the anchor
-        title = title.replaceAll("(?i)\\b(ler mais|leia mais|veja mais)\\b", "").trim();
-
-        Element container = findRelevantContainer(articleLink);
-        String summary = extractSummary(container);
-
-        return new NewsSummary(title, summary.isBlank() ? title : summary, url, sourceName(), LocalDateTime.now());
-    }
-
-    @Override
-    public DetailedContent detailedCollect(String url) {
-        try {
-            Document document = requestDocument(url);
-            if (document == null) return null;
-
-            // Porto Digital renders news paragraphs inside the Nuxt body
-            StringBuilder textBuilder = new StringBuilder();
-            for (Element p : document.select("p")) {
-                String text = p.text().trim();
-                // Filter out footer / copyright / address text
-                if (text.length() > 20
-                        && !text.contains("Copyright")
-                        && !text.contains("Cais do Apolo")
-                        && !text.contains("CNPJ")
-                        && !text.contains("Todos os direitos reservados")) {
-                    if (!textBuilder.isEmpty()) textBuilder.append("\n\n");
-                    textBuilder.append(text);
-                }
-            }
-
-            String fullContent = textBuilder.toString().trim();
-            if (!fullContent.isBlank()) {
-                return new DetailedContent(fullContent, extractImage(document, null));
-            }
-        } catch (Exception e) {
-            log.error("Failed to collect Porto Digital detailed content for URL: {}", url, e);
-        }
-        return null;
+    protected String singleStoryEndpointTemplate() {
+        return "https://api.storyblok.com/v1/cdn/stories/noticias/%s?token=%s&version=published";
     }
 
     @Override
@@ -104,9 +64,42 @@ public class PortoDigitalCollector extends HtmlCollector {
         return SourceName.PORTO_DIGITAL;
     }
 
-    private Element findRelevantContainer(Element link) {
-        Element container = link.closest("article, li, .card, [class*=card], [class*=news], [class*=noticia]");
+    @Override
+    protected NewsSummary mapStory(JsonNode story) {
+        String slug = story.path("slug").asText("").trim();
+        String fullSlug = story.path("full_slug").asText("").trim();
 
-        return container != null ? container : link.parent();
+        String canonicalUrl;
+        if (!slug.isBlank()) {
+            canonicalUrl = BASE_URL + "/noticias/" + slug.replaceAll("^/+", "");
+        } else if (!fullSlug.isBlank()) {
+            canonicalUrl = BASE_URL + "/" + fullSlug.replaceAll("^/+", "");
+        } else {
+            return null;
+        }
+
+        JsonNode content = story.path("content");
+        String title = content.path("title").asText("").trim();
+        if (title.isBlank()) {
+            title = story.path("name").asText("").trim();
+        }
+        if (title.isBlank()) {
+            return null;
+        }
+
+        String summary = content.path("lead").asText("").trim();
+        if (summary.isBlank()) {
+            summary = content.path("summary").asText("").trim();
+        }
+        if (summary.isBlank()) {
+            summary = extractFirstParagraph(content.path("long_text"));
+        }
+        if (summary.isBlank()) {
+            summary = title;
+        }
+
+        LocalDateTime publishedDate = parseStoryblokDate(story);
+
+        return new NewsSummary(title, summary, canonicalUrl, sourceName(), publishedDate);
     }
 }

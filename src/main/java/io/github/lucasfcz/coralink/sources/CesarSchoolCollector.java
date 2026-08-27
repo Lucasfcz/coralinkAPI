@@ -4,8 +4,12 @@ import io.github.lucasfcz.coralink.enums.SourceName;
 import io.github.lucasfcz.coralink.sources.collector.WordPressCollector;
 import org.springframework.stereotype.Component;
 
+/**
+ * Coletor oficial para notícias da faculdade CESAR School (graduação e pós-graduação).
+ */
 @Component
 public class CesarSchoolCollector extends WordPressCollector {
+
 
     private static final String BASE_URL = "https://www.cesar.school";
 

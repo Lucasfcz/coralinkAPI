@@ -73,16 +73,18 @@ public class Opportunity {
     @Column(nullable = false)
     private Boolean isFree;
 
-    // true if open to the general public/all students, false if exclusive to students of the specific university/institution
+    // Define se a oportunidade é aberta ao público externo e a qualquer estudante (true)
+    // ou se é restrita estritamente a alunos matriculados na instituição de origem (false).
     @Column(nullable = false)
     private Boolean isForAll;
+
+
+    @Column(name = "is_active", nullable = false)
+    private Boolean isActive;
 
     @CreationTimestamp
     @Column(nullable = false)
     private LocalDateTime createdAt;
-
-    @Column(name = "is_active", nullable = false)
-    private Boolean isActive;
 
     @Builder
     private Opportunity(RawOpportunity rawOpportunity, String summary, OpportunityType type,

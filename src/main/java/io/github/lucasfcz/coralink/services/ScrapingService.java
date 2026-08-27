@@ -17,13 +17,15 @@ import java.time.Instant;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-// class responsible for first AI screening to know if is relevant or not
-// and then second AI extraction to extract relevant information from the opportunity.
-// It also persists the results in the database.
+/**
+ * Serviço responsável por disparar todos os coletores registrados,
+ * desduplicar as notícias encontradas contra o banco de dados e persistir novos resumos brutos (RawOpportunity).
+ */
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class  ScrapingService {
+public class ScrapingService {
+
 
     private final List<Collector> collectors;
     private final RawOpportunityRepository rawOpportunityRepository;

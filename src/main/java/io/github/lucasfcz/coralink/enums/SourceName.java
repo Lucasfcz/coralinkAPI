@@ -8,5 +8,7 @@ public enum SourceName {
     PORTO_DIGITAL,
     CESAR_SCHOOL,
     UNIBRA,
-    UNIFAFIRE
+    UNIFAFIRE,
+    SYMPLA,
+    CESAR
 }

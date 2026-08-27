@@ -9,6 +9,11 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 
+/**
+ * Coletor oficial para notícias da Universidade de Pernambuco (UPE).
+ * Suporta fallback automático para o formato de rota nativo (?rest_route=/wp/v2/posts)
+ * caso o endpoint padrão com reescrita (/wp-json/) falhe.
+ */
 @Slf4j
 @Component
 public class UpeCollector extends WordPressCollector {
@@ -31,18 +36,18 @@ public class UpeCollector extends WordPressCollector {
             return fetchPosts(postsEndpoint());
         } catch (CollectException httpsException) {
             String fallbackEndpoint = fallbackPostsEndpoint();
-            log.warn("Primary UPE endpoint failed; retrying fallback endpoint {}", fallbackEndpoint, httpsException);
+            log.warn("Endpoint primário da UPE falhou; tentando endpoint de contingência {}", fallbackEndpoint, httpsException);
             try {
                 return fetchPosts(fallbackEndpoint);
             } catch (RuntimeException fallbackException) {
-                log.warn("Fallback UPE endpoint also failed", fallbackException);
+                log.warn("Endpoint de contingência da UPE também falhou", fallbackException);
                 return List.of();
             }
         }
     }
 
     protected String fallbackPostsEndpoint() {
-        return "https://upe.br/wp-json/wp/v2/posts?per_page=20&_embed=wp:featuredmedia";
+        return "https://upe.br/?rest_route=/wp/v2/posts&per_page=20";
     }
 
     @Override
@@ -50,3 +55,4 @@ public class UpeCollector extends WordPressCollector {
         return SourceName.UPE;
     }
 }
+

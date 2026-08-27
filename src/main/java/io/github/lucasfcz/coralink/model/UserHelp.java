@@ -27,8 +27,10 @@ public class UserHelp {
     @Size(max = 5000)
     private String suggestion;
 
+    // E-mail opcional do usuário, caso ele deseje receber retorno da equipe sobre a sugestão ou ajuda enviada.
     @Column
-    private String userEmail; // Is optional for send a response by email if the user want
+    private String userEmail;
+
 
     @Builder
 

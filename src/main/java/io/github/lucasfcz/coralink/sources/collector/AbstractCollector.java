@@ -6,21 +6,31 @@ import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
+import org.jsoup.nodes.TextNode;
 import org.jsoup.select.Elements;
 
-import javax.net.ssl.*;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSocketFactory;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
 import java.io.IOException;
 import java.security.SecureRandom;
 import java.security.cert.X509Certificate;
 import java.util.List;
 
+/**
+ * Classe base para todos os coletores de notícias e oportunidades do Coralink.
+ * Centraliza configurações de rede HTTP, tolerância a certificados SSL legados/autoassinados
+ * (comum em portais governamentais e universitários de PE) e heurísticas de extração de texto e imagens.
+ */
 @Slf4j
 public abstract class AbstractCollector implements Collector {
 
-    private static final int TIMEOUT_MILLIS = 15000;
-    private static final String USER_AGENT =
+    protected static final int TIMEOUT_MILLIS = 15000;
+    protected static final String USER_AGENT =
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
 
+    // Fábrica SSL tolerante para evitar falhas de handshake em portais com cadeias de certificados incompletas (ex: UFPE)
     protected static final SSLSocketFactory RESILIENT_SSL_SOCKET_FACTORY = createResilientSslSocketFactory();
 
     protected abstract String baseUrl();
@@ -28,11 +38,19 @@ public abstract class AbstractCollector implements Collector {
     protected abstract String imageFallBackUrl();
 
     @Override
+    public String fallbackImageUrl() {
+        return imageFallBackUrl();
+    }
+
+    @Override
     public abstract List<NewsSummary> collect();
 
     @Override
     public abstract DetailedContent detailedCollect(String url);
 
+    /**
+     * Realiza a requisição HTTP GET usando Jsoup com headers modernos de navegador e SSL resiliente.
+     */
     protected Document requestDocument(String url) {
         try {
             return Jsoup.connect(url)
@@ -42,16 +60,19 @@ public abstract class AbstractCollector implements Collector {
                     .referrer(baseUrl())
                     .followRedirects(true)
                     .get();
-
         } catch (IOException e) {
-            log.error("Failed to fetch URL: {}", url, e);
+            log.error("Falha ao requisitar URL: {}", url, e);
             return null;
         }
     }
 
+    /**
+     * Extrai texto limpo de um elemento HTML, removendo cabeçalhos, rodapés, scripts e elementos de ruído.
+     */
     protected String extractSummary(Element content) {
         if (content == null) return "";
         Element working = content.clone();
+
         working.select(
                 "header," +
                         "footer," +
@@ -73,66 +94,22 @@ public abstract class AbstractCollector implements Collector {
         return working.text().trim();
     }
 
-    protected String extractImage(Document document, Element content) {
-        if (document != null) {
-            Element ogImage = document.selectFirst("meta[property=og:image], meta[name=twitter:image]");
-            if (ogImage != null) {
-                String imgUrl = ogImage.hasAttr("content") ? ogImage.attr("content").trim() : "";
-                if (!imgUrl.isBlank() && !imgUrl.startsWith("data:")) {
-                    return ogImage.absUrl("content").isBlank() ? imgUrl : ogImage.absUrl("content");
-                }
-            }
-        }
-
-        if (content != null) {
-            Elements images = content.select("img");
-            for (Element img : images) {
-                String candidate = resolveImageSource(img);
-                if (candidate != null && !candidate.isBlank() && !candidate.startsWith("data:")) {
-                    return candidate;
-                }
-            }
-        }
-
-        if (document != null) {
-            Elements images = document.select("article img, main img, .post img, .noticia img");
-            for (Element img : images) {
-                String candidate = resolveImageSource(img);
-                if (candidate != null && !candidate.isBlank() && !candidate.startsWith("data:") && !candidate.endsWith(".svg")) {
-                    return candidate;
-                }
-            }
-        }
-
-        return imageFallBackUrl();
+    /**
+     * Utilitário comum para extrair o slug final de uma URL limpa (sem query params ou hash).
+     */
+    protected String extractSlug(String url) {
+        if (url == null || url.isBlank()) return "";
+        String clean = url.split("\\?")[0].split("#")[0].replaceAll("/+$", "");
+        int lastSlash = clean.lastIndexOf('/');
+        return lastSlash >= 0
+                ? clean.substring(lastSlash + 1)
+                : clean;
     }
 
-    private String resolveImageSource(Element img) {
-        if (img == null) return null;
-
-        for (String attr : List.of("src", "data-src", "data-lazy-src", "data-original")) {
-            if (img.hasAttr(attr)) {
-                String val = img.attr(attr).trim();
-                if (!val.isBlank() && !val.startsWith("data:")) {
-                    String abs = img.absUrl(attr);
-                    return abs.isBlank() ? val : abs;
-                }
-            }
-        }
-
-        if (img.hasAttr("srcset")) {
-            String srcset = img.attr("srcset").trim();
-            if (!srcset.isBlank()) {
-                String firstCandidate = srcset.split(",")[0].trim().split(" ")[0].trim();
-                if (!firstCandidate.isBlank() && !firstCandidate.startsWith("data:")) {
-                    return firstCandidate;
-                }
-            }
-        }
-
-        return null;
-    }
-
+    /**
+     * Cria um SSLSocketFactory permissivo para contornar problemas de certificados SSL autoassinados
+     * ou cadeias intermediárias ausentes em servidores de instituições públicas.
+     */
     private static SSLSocketFactory createResilientSslSocketFactory() {
         try {
             TrustManager[] trustAllCerts = new TrustManager[]{
@@ -146,7 +123,7 @@ public abstract class AbstractCollector implements Collector {
             sslContext.init(null, trustAllCerts, new SecureRandom());
             return sslContext.getSocketFactory();
         } catch (Exception e) {
-            log.error("Failed to initialize resilient SSL socket factory", e);
+            log.error("Falha ao inicializar fábrica de conexões SSL resiliente", e);
             return (SSLSocketFactory) SSLSocketFactory.getDefault();
         }
     }
