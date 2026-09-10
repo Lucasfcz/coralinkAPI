@@ -24,6 +24,22 @@ public class UfpeCollector extends HtmlCollector {
     private static final String NEWS_URL = BASE_URL + "/ascom/noticias";
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
+    private static final List<String> INSTITUTIONAL_NOISE_TERMS = List.of(
+            "nota de pesar",
+            "falecimento",
+            "luto oficial",
+            "reconduzido",
+            "reconduzida",
+            "completa um ano",
+            "comemora 15 anos",
+            "comemora 10 anos",
+            "comemora 20 anos",
+            "comemora 50 anos",
+            "eleição para",
+            "posse da",
+            "posse do"
+    );
+
     @Override
     protected String baseUrl() {
         return BASE_URL;
@@ -67,6 +83,14 @@ public class UfpeCollector extends HtmlCollector {
             summary = title;
         }
 
+        if (isInstitutionalNoise(title, summary)) {
+            return null;
+        }
+
+        if (url.startsWith("http://")) {
+            url = "https://" + url.substring(7);
+        }
+
         LocalDateTime publishedDate = LocalDateTime.now();
         Element dateEl = article.selectFirst("span.list-full-content__date");
         if (dateEl != null) {
@@ -86,6 +110,17 @@ public class UfpeCollector extends HtmlCollector {
                 sourceName(),
                 publishedDate
         );
+    }
+
+    private boolean isInstitutionalNoise(String title, String summary) {
+        String lowerTitle = title.toLowerCase();
+        String lowerSummary = summary.toLowerCase();
+        for (String term : INSTITUTIONAL_NOISE_TERMS) {
+            if (lowerTitle.contains(term) || lowerSummary.contains(term)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override

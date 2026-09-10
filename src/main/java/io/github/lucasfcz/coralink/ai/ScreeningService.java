@@ -15,7 +15,6 @@ import java.util.stream.Collectors;
 /**
  * Serviço de Triagem (Fase 1 do Pipeline).
  * Utiliza o modelo de IA (Google Gemini) para classificar se os resumos brutos de notícias
- * coletados possuem pertinência prática (Categoria A: oportunidades ativas / Categoria B: avisos acadêmicos).
  */
 @Slf4j
 @Service
@@ -27,53 +26,50 @@ public class ScreeningService {
     private static final int MAX_RETRIES = 3;
 
     private static final String SYSTEM_PROMPT = """
-        Você é um classificador especializado de conteúdo relevante para universitários de Recife, Olinda e Paulista (RMR).
-        Sua função é analisar um conteúdo publicado por uma faculdade e decidir se ele é relevante para o universitario.
+        Você é um classificador especializado de oportunidades para universitários da Região Metropolitana do Recife (RMR).
+        Sua função é analisar conteúdos publicados por faculdades, instituições de ensino e hubs de tecnologia,
+        e decidir com precisão se o conteúdo representa uma OPORTUNIDADE ACIONÁVEL para o estudante universitário participar.
 
-        ## O que torna algo relevante
-        Considere relevante quando o conteúdo se encaixar em pelo menos uma destas duas categorias:
+        ## O que é RELEVANTE (isRelevant = true)
+        Considere relevante APENAS conteúdos que representem uma oportunidade real, acionável e aberta
+        na qual o estudante possa se inscrever, concorrer ou participar ativamente, tais como:
+        1. Eventos e Networking: palestras, conferências, congressos, simpósios, meetups, feiras de carreira.
+        2. Workshops e Oficinas: minicursos práticos, oficinas mão na massa, treinamentos técnicos intensivos.
+        3. Cursos e Capacitação: bootcamps, cursos livres, cursos de extensão, programas de formação em tecnologia/carreira.
+        4. Formação Acadêmica: processos seletivos para cursos de graduação, pós-graduação, mestrado, cursos técnicos.
+        5. Hackathons e Maratonas: desafios de inovação, maratonas de programação e ideação.
+        6. Competições Acadêmicas: olimpíadas científicas, desafios de programação, competições de robótica/matemática.
+        7. Carreira e Mercado: programas de estágio, vagas de trainee, vagas de emprego para estudantes/júnior.
+        8. Bolsas e Fomento: editais abertos com bolsas de estudo, auxílios de permanência ou fomento a projetos.
+        9. Pesquisa e Academia: chamadas abertas para iniciação científica (PIBIC/PIBITI), laboratórios de pesquisa, monitoria.
+        10. Mobilidade e Extensão: intercâmbios estudantis, mobilidade acadêmica, projetos de extensão e voluntariado com inscrições abertas.
 
-        ### Categoria A — Oportunidade em que o aluno pode participar
-        Exemplos: hackathons, eventos, workshops, meetups, palestras, bootcamps, cursos, cursos de extensão,
-        editais com inscrições abertas, bolsas, programas de estágio, vagas, competições, programas de
-        aceleração, programas de incubação, chamadas públicas com inscrição em aberto.
+        Critério fundamental: o estudante tem uma ação concreta de participação ou inscrição disponível (Call-to-Action).
 
-        ### Categoria B — Informação que o aluno precisa saber para não ser pego de surpresa
-        Exemplos: mudança no calendário acadêmico, prazo de matrícula ou rematrícula, resultado de edital
-        (mesmo que a inscrição já tenha fechado), comunicados administrativos que afetam a rotina do aluno
-        (greve, mudança de horário de aula, alteração no funcionamento do RU, mudança de campus/sala).
+        ## O que NÃO É RELEVANTE (isRelevant = false) — REJEIÇÃO ESTRITA
+        Rejeite categoricamente conteúdos puramente informativos, jornalísticos ou administrativos que não oferecem inscrição/participação ativa:
+        1. Comunicados administrativos e rotina: avisos de calendário acadêmico geral, datas de matrícula ou rematrícula regular da faculdade, horários de aulas, funcionamento do Restaurante Universitário (RU), bibliotecas, mudanças de salas, greves, paralisações.
+        2. Notícias institucionais e burocráticas: notas de falecimento/pesar, eleições de reitoria/colegiado/sindicato, reformas ou inauguração de prédios/espaços, balanços de gestão, portarias, novas diretrizes institucionais.
+        3. Notícias acadêmicas e artigos informativos: artigos de opinião, reportagens sobre pesquisas já concluídas, coberturas de acontecimentos passados, entrevistas de professores, notícias institucionais em geral.
+        4. Resultados de editais e divulgações fechadas: listas de aprovados, homologação de resultados finais, convocações de editais cujas inscrições já encerraram.
+        5. Vitrine e homenagens a terceiros: notícias comemorativas como "Aluno da instituição ganha prêmio", "Faculdade celebra aniversário", "Professor é homenageado" — são apenas vitrines, sem oportunidade para quem lê.
+        6. Notícias com prazos de inscrição manifestamente expirados.
+        7. Política, esportes gerais, entretenimento ou promoções comerciais sem foco em carreira/aprendizado universitário.
 
-        O critério comum entre as duas categorias: o aluno ganha algo prático ao saber disso — evita perder
-        um prazo, evita ser surpreendido, ou pode agir a partir da informação. Se a notícia não muda nada na
-        vida prática do aluno, ela não é relevante, mesmo que fale de tecnologia ou da própria faculdade.
-
-        ## O que NÃO é relevante
-        - Notícias de conquista pessoal ou institucional sem utilidade prática para quem lê (ex: "Fulano vence
-        hackathon", "Faculdade X é premiada", "Aluno é destaque em evento") — é vitrine, não é algo que o
-        aluno pode aproveitar diretamente.
-        - Notícias com prazo ou data já expirados, quando a única utilidade daquele conteúdo dependia do prazo
-        (ex: inscrição de um curso que já fechou e que não teve resultado divulgado).
-        - Política, entretenimento, esportes, promoções comerciais.
-        - Notícias institucionais genéricas sem nenhum impacto prático (ex: balanço histórico da instituição,
-        inauguração de prédio sem relação com a rotina do aluno).
-        - Assuntos sem relação com a vida acadêmica, carreira ou tecnologia.
-
-        Nunca invente informações. Baseie toda a classificação apenas no conteúdo fornecido.
+        Nunca invente informações. Baseie a classificação estritamente no texto fornecido.
 
         ## Conteúdo curto ou só com título
-        Algumas fontes fornecem apenas o título, sem resumo ou corpo do texto. Nesses casos, classifique com
-        base nos sinais presentes no próprio título (palavras como "edital", "inscrições abertas", "bolsa",
-        "vagas", "matrícula", "prazo", "hackathon" são sinais fortes de relevância). Na dúvida real, quando o
-        título não dá sinal suficiente pra decidir classifique como relevante, para que o conteúdo passe para
-        análise mais detalhada na próxima etapa, em vez de ser descartado sem revisão.
+        Quando a fonte fornecer apenas o título ou poucas palavras:
+        - Palavras como "inscrições abertas", "edital de bolsa", "vaga de estágio", "hackathon", "workshop", "curso", "olimpíada", "iniciação científica", "processo seletivo" são sinais fortes de relevância (isRelevant = true).
+        - Termos como "calendário", "nota de pesar", "resultado final", "comunicado", "eleição", "recesso", "posse" são sinais fortes de rejeição (isRelevant = false).
+        - Em caso de dúvida real em que o título sugira uma oportunidade mas não detalhe prazos, marque como relevante (true) para análise na fase de extração.
 
         ## Formato de entrada e saída
         Você receberá uma lista de conteúdos, cada um identificado por um "RawOpportunityId" único.
-        Retorne APENAS um JSON compatível com o formato do exemplo a seguir:
+        Retorne APENAS um JSON estritamente compatível com o formato:
         {"screeningResults":[{"rawOpportunityId":1,"isRelevant":true}]}
-        Para cada item recebido, gere um resultado de classificação separado, incluindo o mesmo
-        "rawOpportunityId" dentro da lista "screeningResults".
-        Nunca omita nenhum item recebido. Retorne exatamente um resultado para cada RawOpportunityId enviado.
+        Para cada item recebido, gere exatamente um resultado correspondente na lista "screeningResults".
+        Nunca omita nenhum item recebido.
         """;
 
     public ScreeningBatchResult screen(List<RawOpportunity> rawOpportunityList) {

@@ -3,64 +3,41 @@ package io.github.lucasfcz.coralink.enums;
 import com.fasterxml.jackson.annotation.JsonCreator;
 
 public enum OpportunityType {
-    // Eventos
+    // Eventos e Networking
     EVENT,
-    LECTURE,
     WORKSHOP,
-    MEETUP,
-    NETWORKING,
-    CONGRESS,
-    SYMPOSIUM,
-    SEMINAR,
-    CONFERENCE,
-    ACADEMIC_WEEK,
 
-    // Competições
+    // Formação e Capacitação
+    COURSE,
+    GRADUATION,
+
+    // Competições e Maratonas
     HACKATHON,
     COMPETITION,
-    CHALLENGE,
-    OLYMPIAD,
 
-    // Formação
-    COURSE,
-    BOOTCAMP,
-    CERTIFICATION,
-    TRAINING,
-    WEBINAR,
+    // Carreira e Mercado
+    INTERNSHIP,
 
-    // Oportunidades acadêmicas
+    // Bolsas e Fomento
     SCHOLARSHIP,
-    RESEARCH_PROGRAM,
-    EXTENSION_PROGRAM,
-    SCIENTIFIC_INITIATION,
+
+    // Pesquisa e Academia
+    RESEARCH,
+
+    // Mobilidade e Extensão
     EXCHANGE_PROGRAM,
-    MONITORING,
-
-    // Mercado de trabalho
-    INTERNSHIP_PROGRAM,
-    TRAINEE_PROGRAM,
-    JOB,
-    EMPLOYABILITY_ACTION,
-
-    // Chamadas
-    EDITAL,
-    EDITAL_RESULT,
-    CALL_FOR_PAPERS,
     VOLUNTEERING,
 
-    // Informativo / administrativo (categoria B do screening)
-    ACADEMIC_CALENDAR,
-    ADMINISTRATIVE_NOTICE,
-
-    // Conteúdo
-    ARTICLE,
-    NEWS,
+    // Outros
     OTHER;
 
     @JsonCreator
     public static OpportunityType fromValue(String value) {
+        if (value == null || value.isBlank()) {
+            return OTHER;
+        }
         try {
-            return OpportunityType.valueOf(value.toUpperCase());
+            return OpportunityType.valueOf(value.trim().toUpperCase());
         } catch (Exception e) {
             return OTHER;
         }

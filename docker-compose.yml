@@ -6,8 +6,12 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: dev
       GEMINI_API_KEY: ${GEMINI_API_KEY}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
     depends_on:
       db:
+        condition: service_healthy
+      redis:
         condition: service_healthy
 
   db:
@@ -26,5 +30,18 @@ services:
       timeout: 5s
       retries: 5
 
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - coralink_redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
 volumes:
   coralink_data:
+  coralink_redis:

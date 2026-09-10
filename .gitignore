@@ -35,3 +35,9 @@ build/
 ### .env ###
 .env
 .env.*
+
+### IDE and Local Scratch ###
+.claude/
+.codex/
+.cursor/
+debug/

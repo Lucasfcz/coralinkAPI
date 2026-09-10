@@ -20,5 +20,6 @@ public record OpportunityResponse(
         SourceName sourceName,
         String imageUrl,
         Boolean isFree,
-        Boolean isForAll
+        Boolean isForAll,
+        LocalDate expiresAt
 ) { }

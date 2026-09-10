@@ -129,4 +129,16 @@ public class CollectorDiagnosticTest {
     void testUpeCollector() {
         assertAndDiagnoseCollector("UPE", new UpeCollector(), SourceName.UPE);
     }
+
+    @Test
+    @DisplayName("Diagnose SENAC_PE Collector")
+    void testSenacPeCollector() {
+        assertAndDiagnoseCollector("SENAC_PE", new SenacPeCollector(), SourceName.SENAC_PE);
+    }
+
+    @Test
+    @DisplayName("Diagnose FACEPE Collector")
+    void testFacepeCollector() {
+        assertAndDiagnoseCollector("FACEPE", new FacepeCollector(), SourceName.FACEPE);
+    }
 }
