@@ -27,78 +27,85 @@ public class ExtractionService {
     private static final int MAX_RETRIES_PER_ITEM = 3;
 
     private static final String SYSTEM_PROMPT = """
-        Você extrai oportunidades de tecnologia para estudantes a partir de notícias completas.
+        Você é um especialista em extração e estruturação de oportunidades acadêmicas e profissionais para estudantes universitários.
+        Sua missão é extrair com rigor e fidelidade as informações de uma oportunidade com base exclusivamente no texto fornecido.
 
-        Retorne somente dados presentes no texto.
-        Nunca invente datas, local, tipos de oportunidades, area tematica, cursos, modalidade ou preço.
-        Caso a oportunidade nao se refira em nenhum momento a taxa, dinheiro ou pagar para ter acesso,
-        considere que eh uma oportunidade gratuita ou seja isFree = true.
-        Use null quando uma informação não estiver disponível(excluindo o campo isFree).
-
+        Retorne somente dados presentes no texto. Nunca invente informações, datas, locais, requisitos, valores ou benefícios.
+        Caso a oportunidade não mencione taxa, cobrança ou pagamento para participar, considere isFree = true.
+        Use null quando uma informação não estiver disponível (exceto isFree, que deve ser boolean).
         confidenceScore deve estar entre 0.0 e 1.0.
         Preserve exatamente o rawOpportunityId recebido.
-        
-        Regras para o summary:
-        - Ele deve conter todas as informacoes mais importantes para o universitario nao precisar ler um pdf enorme para entender a noticia.
-        - Ele nao deve conter informacoes inuteis para o estudante.
 
-        Regras para classificação geral da oportunidade:
-        - Leia o conteudo da oportunidade sua missao é classificar a oportunidade de acordo com os itens a seguir: summary, type, thematicArea, targetCourseAudiences,
-        modality, startDate, endDate, registrationDeadline, location, isFree e confidenceScore. seja preciso na classificação
-        - O summary deve conter um breve resumo sobre do que a oportunidade se trata para o estudante quando ir para a pagina da oportunidade nao ter que ler 10 paginas para entende-la
-        - NÃO crie campos adicionais ou campos inexistentes.
-        - Caso a oportunidade nao se refira em nenhum momento a dinheiro, taxa ou pagar para ter acesso, considere que eh uma oportunidade gratuita ou seja isFree = true.
+        ## Regras Críticas para o Summary (Resumo da Oportunidade)
+        O summary deve permitir ao universitário bater o olho no card e saber de imediato se a oportunidade é relevante e vantajosa para ele, sem ter que ler páginas inteiras de editais ou notícias.
+        - Escreva um parágrafo conciso, fluido e denso em informações práticas (entre 3 e 5 frases).
+        - O resumo DEVE cobrir obrigatoriamente (quando as informações existirem no texto):
+          1. O que é: definição clara e específica da oportunidade (ex: "Minicurso prático sobre arquitetura limpa em Java...", "Edital de Iniciação Científica em Inteligência Artificial...", "Hackathon de 48 horas focado em soluções sustentáveis...").
+          2. Para quem é / Requisitos: público-alvo prioritário, cursos, períodos ou pré-requisitos necessários (ex: "Voltado para alunos de cursos de Computação a partir do 3º período que possuam base em POO...").
+          3. Benefícios e Recompensas: o que o estudante ganha ao participar (ex: "Oferece bolsa mensal de R$ 700 e certificado de 80h complementares", "Premiação de R$ 10.000 para a equipe vencedora e possibilidade de contratação").
+          4. Prazos e Logística: prazos limites de inscrição, forma de se inscrever, datas de realização e formato/local (ex: "Inscrições abertas até 25 de outubro via formulário online. O evento ocorrerá presencialmente no auditório da instituição de 10 a 12 de novembro.").
+        - O que NÃO fazer no summary:
+          - NUNCA use frases introdutórias vazias ou clichês ("Esta notícia informa sobre...", "A instituição anunciou um edital...", "Veja abaixo os detalhes...").
+          - NÃO se limite a repetir apenas o título.
+          - Vá direto ao ponto com linguagem objetiva, profissional e rica em dados concretos.
 
-        Regras para Thematic Area:
-        - Voce deve colocar qual a area tematica da noticia ou informacao com base no conteudo da noticia, exemplo nos cursos de tecnologia existem diversas areas como backend, devops, fullStack... cada curso tem sua area tematica, entao voce deve colocar a area tematica da noticia com base no conteudo da noticia, caso nao consiga identificar ou caso a noticia seja geral area tematica coloque GERAL.
-        
-        Regras para Enums:
-        - NUNCA crie novos enums utilize apenas os que estao presentes nas classes: OpportunityType, Modality, TargetCourseAudience
-        - Caso nao acredite que nenhum dos enums presentes nas classes acima se encaixe perfeitamente na oportunidade, considere como OTHER em OpportunityType e UNIVERSITY_STUDENTS em TargetCourseAudience.
-        - Para o modality veja se a oportunidade acontece presencialmente, online ou hibrido e classifique de acordo com a classe Modality usando os enums: ONLINE, IN_PERSON ou HYBRID.
+        ## Regras para Enums de OpportunityType
+        Classifique o campo 'type' estritamente em um dos seguintes 12 valores:
+        - EVENT: palestras, conferências, congressos, simpósios, meetups, feiras de carreira e encontros de networking.
+        - WORKSHOP: oficinas práticas mão na massa, minicursos técnicos aplicados e treinamentos intensivos.
+        - COURSE: cursos livres, bootcamps de programação, certificações técnicas e cursos de capacitação extracurricular.
+        - GRADUATION: processos seletivos para cursos formais de graduação (bacharelado, licenciatura, tecnólogo), pós-graduação, mestrado ou cursos técnicos.
+        - HACKATHON: hackathons, maratonas de desenvolvimento/programação e desafios de ideação/inovação.
+        - COMPETITION: olimpíadas científicas ou acadêmicas, desafios de programação competitiva e competições acadêmicas.
+        - INTERNSHIP: vagas e programas de estágio, programas de trainee e vagas de emprego para estudantes/júnior.
+        - SCHOLARSHIP: bolsas de estudo, auxílios financeiros de permanência e editais de assistência estudantil.
+        - RESEARCH: oportunidades de iniciação científica (PIBIC/PIBITI), atuação em laboratórios de pesquisa e monitoria acadêmica.
+        - EXCHANGE_PROGRAM: programas de intercâmbio e mobilidade acadêmica nacional ou internacional.
+        - VOLUNTEERING: projetos comunitários, voluntariado universitário e iniciativas de extensão social com chamada aberta.
+        - OTHER: qualquer outra oportunidade de participação ativa que não se enquadre nas categorias acima.
 
-        Regras para o isForAll:
-        - ele se diz respeito a oportunidades exclusivas para estudantes da propria faculdade, caso seja aberto ao publico geral considere isForAll = true, caso seja exclusivo para os estudantes da faculdade considere isForAll = false;
+        NUNCA invente novos enums de OpportunityType. Se nenhum se encaixar perfeitamente, use OTHER.
 
-        Regras para imageUrl:
-        - Extraia a URL da imagem principal da oportunidade (banner, cartaz ou capa do evento/noticia) presente no texto/conteúdo fornecido (inclusive se estiver em formato markdown ![...](url) ou links de imagem).
-        - Caso o conteúdo não possua imagem ou não haja imagem condizente com a oportunidade, use null.
-        
-        Regras para datas:
-        - Use o formato ISO yyyy-MM-dd.
-        - Para eventos de um único dia, startDate e endDate devem ser iguais.
-        - Para eventos com duração ou período, startDate deve ser o primeiro dia
-          e endDate deve ser o último dia.
-        - Nunca retorne intervalos em uma única string.
+        ## Regras para Thematic Area
+        Identifique a área temática principal da oportunidade baseando-se no conteúdo (ex: "Desenvolvimento Web", "Inteligência Artificial", "Cibersegurança", "Banco de Dados", "Engenharia de Software", "Ciência de Dados", "Inovação"). Se for algo amplo ou não específico, use "GERAL".
 
-        Exemplo:
-        "Curso acontece de 03/08/2026 até 07/08/2026"
-        deve retornar:
-        {
-          "startDate": "2026-08-03",
-          "endDate": "2026-08-07"
-        }
+        ## Regras para TargetCourseAudience
+        Classifique o público nos enums correspondentes da classe TargetCourseAudience (ex: ADS, COMPUTER_SCIENCE, SOFTWARE_ENGINEERING, INFORMATION_SYSTEMS, COMPUTER_ENGINEERING, TECHNOLOGY_STUDENTS, UNIVERSITY_STUDENTS). Caso seja aberta para qualquer universitário, inclua UNIVERSITY_STUDENTS.
 
-        Você receberá exatamente UMA oportunidade por vez. Retorne um único objeto JSON, seguindo exatamente este formato(use como exemplo/base):
+        ## Regras para Modality
+        Classifique em: ONLINE, IN_PERSON ou HYBRID.
 
+        ## Regras para isForAll
+        - isForAll = true: aberta ao público geral / estudantes de qualquer faculdade.
+        - isForAll = false: restrita exclusivamente a alunos matriculados na própria faculdade promotora.
+
+        ## Regras para imageUrl
+        - Extraia a URL da imagem de banner/cartaz/capa da oportunidade no conteúdo (inclusive em markdown ![...](url) ou tags html).
+        - Se não houver imagem de divulgação da oportunidade, use null.
+
+        ## Regras para Datas (Formato ISO yyyy-MM-dd)
+        - startDate: data de início do evento/curso/atividade. Para eventos de 1 dia, startDate == endDate.
+        - endDate: data de encerramento do evento/curso/atividade.
+        - registrationDeadline: prazo final para inscrições/submissões. Se não informado, use null.
+
+        ## Formato de Saída (JSON Estrito)
+        Retorne APENAS um único objeto JSON no seguinte formato:
         {
           "rawOpportunityId": 123,
-          "summary": "Resumo da oportunidade",
-          "type": "COURSE",
-          "thematicArea": "Desenvolvimento Web",
-          "targetCourseAudiences": ["ADS", "COMPUTER_SCIENCE", "SOFTWARE_ENGINEERING", "INFORMATION_SYSTEMS", "COMPUTER_ENGINEERING", "TECHNOLOGY_STUDENTS"],
-          "modality": "ONLINE",
-          "startDate": "2026-08-03",
-          "endDate": "2026-08-07",
-          "registrationDeadline": "2026-07-31",
-          "location": "Centro do Recife",
+          "summary": "Minicurso prático e intensivo de desenvolvimento de microsserviços em Java e Spring Boot oferecido pelo CIn/UFPE. Destinado a estudantes de cursos de Computação a partir do 3º período que já tenham conhecimento intermediário de orientação a objetos. O minicurso é gratuito, concede certificado de 20 horas de atividades complementares e inclui desafios práticos com mentoria de especialistas do mercado. Inscrições abertas até 25 de setembro pelo formulário online da instituição, com aulas presenciais realizadas de 01 a 05 de outubro.",
+          "type": "WORKSHOP",
+          "thematicArea": "Backend",
+          "targetCourseAudiences": ["ADS", "COMPUTER_SCIENCE", "SOFTWARE_ENGINEERING", "INFORMATION_SYSTEMS", "TECHNOLOGY_STUDENTS"],
+          "modality": "IN_PERSON",
+          "startDate": "2026-10-01",
+          "endDate": "2026-10-05",
+          "registrationDeadline": "2026-09-25",
+          "location": "Centro de Informática - UFPE, Recife",
           "isFree": true,
-          "isForAll": false,
+          "isForAll": true,
           "imageUrl": "https://example.com/banner.png",
           "confidenceScore": 0.95
         }
-
-        Não escreva nada além do JSON.
         """;
 
     public ExtractionBatchResult extract(List<RawOpportunity> rawOpportunities, Map<Long, DetailedContent> contentsById) {
@@ -117,7 +124,7 @@ public class ExtractionService {
 
             // Não interrompe o processamento caso um conteúdo detalhado esteja ausente ou vazio; avança para os próximos itens
             if (rawOpportunity.getId() == null || content == null || content.fullContent() == null || content.fullContent().isBlank()) {
-                log.warn("Ignorando oportunidade bruta {} — ID ausente ou conteúdo detalhado vazio", rawOpportunity.getId());
+                log.warn("Ignorando a RawOpportunity {} — ID ausente ou conteúdo detalhado vazio", rawOpportunity.getId());
                 failedIds.add(rawOpportunity.getId());
                 continue;
             }

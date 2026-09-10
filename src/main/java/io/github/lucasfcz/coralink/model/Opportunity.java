@@ -78,19 +78,18 @@ public class Opportunity {
     @Column(nullable = false)
     private Boolean isForAll;
 
-
-    @Column(name = "is_active", nullable = false)
-    private Boolean isActive;
-
     @CreationTimestamp
     @Column(nullable = false)
     private LocalDateTime createdAt;
+
+    @Column(name = "expires_at", nullable = false)
+    private LocalDate expiresAt;
 
     @Builder
     private Opportunity(RawOpportunity rawOpportunity, String summary, OpportunityType type,
                         String thematicArea, Set<TargetCourseAudience> targetCourseAudiences, Modality modality,
                         LocalDate startDate, LocalDate endDate, LocalDate registrationDeadline, String location, String officialUrl,
-                        Double confidenceScoreAi, String imageUrl, Boolean isFree, Boolean isForAll, Boolean isActive) {
+                        Double confidenceScoreAi, String imageUrl, Boolean isFree, Boolean isForAll) {
         this.rawOpportunity = rawOpportunity;
         this.title = rawOpportunity.getTitle();
         this.summary = summary;
@@ -108,6 +107,24 @@ public class Opportunity {
         this.imageUrl = imageUrl;
         this.isFree = isFree;
         this.isForAll = isForAll;
-        this.isActive = isActive;
+        this.expiresAt = calculateExpiresAt(LocalDate.now());
+    }
+
+    private LocalDate calculateExpiresAt(LocalDate referenceDate) {
+        // 1. registrationDeadline + 3 dias
+        if (this.registrationDeadline != null) {
+            return this.registrationDeadline.plusDays(3);
+        }
+        // 2. endDate
+        if (this.endDate != null) {
+            return this.endDate;
+        }
+        // 3. startDate
+        if (this.startDate != null) {
+            return this.startDate;
+        }
+        // 4. Default de 30 dias a partir da criação (caso de notícias, artigos...)
+        LocalDate base = (this.createdAt != null) ? this.createdAt.toLocalDate() : referenceDate;
+        return base.plusDays(30);
     }
 }

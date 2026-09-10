@@ -55,9 +55,35 @@ class UfpeCollectorTest {
         assertNotNull(summary);
         assertEquals("Título da Notícia UFPE", summary.title());
         assertEquals("Resumo da notícia da UFPE para testes.", summary.shortSummary());
-        assertEquals("http://www.ufpe.br/ascom/noticias/-/asset_publisher/test/content/test-article/40615", summary.url());
+        assertEquals("https://www.ufpe.br/ascom/noticias/-/asset_publisher/test/content/test-article/40615", summary.url());
         assertEquals(SourceName.UFPE, summary.sourceName());
         assertEquals(LocalDateTime.of(2026, 8, 26, 0, 0, 0), summary.foundAt());
+    }
+
+    @Test
+    void testInstitutionalNoiseIsFilteredOut() {
+        String html = """
+                <html>
+                <body>
+                    <div class="list-full-content__item">
+                        <div class="list-full-content__content">
+                            <h3 class="list-full-content__title">
+                                <a href="http://www.ufpe.br/ascom/noticias/nota-de-pesar">
+                                    Nota de Pesar pelo falecimento do professor
+                                </a>
+                            </h3>
+                            <div class="list-full-content__sumary">
+                                A comunidade lamenta o falecimento.
+                            </div>
+                        </div>
+                    </div>
+                </body>
+                </html>
+                """;
+
+        Document doc = Jsoup.parse(html, "https://www.ufpe.br/ascom/noticias");
+        NewsSummary summary = collector.mapArticle(collector.articles(doc).get(0));
+        assertNull(summary);
     }
 
     @Test

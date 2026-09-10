@@ -20,18 +20,19 @@ public class OpportunityController {
 
     @GetMapping
     public ResponseEntity<Page<OpportunityResponse>> getOpportunities(
+            @RequestParam(required = false) String title,
             @RequestParam(required = false) OpportunityType type,
             @RequestParam(required = false) Set<TargetCourseAudience> targetCourseAudience,
             @RequestParam(required = false) Modality modality,
             @RequestParam(required = false) Boolean isFree,
             @RequestParam(required = false) Boolean isForAll,
             Pageable pageable) {
-        return ResponseEntity.ok(opportunityService.getRelevantOpportunities(type, targetCourseAudience, modality, isFree, isForAll, pageable));
+        return ResponseEntity.ok(opportunityService.getRelevantOpportunities(title, type, targetCourseAudience, modality, isFree, isForAll, pageable));
     }
 
     @GetMapping("/search")
     public ResponseEntity<Page<OpportunityResponse>> findOpportunityByTitle(@RequestParam String title, Pageable pageable) {
-        return ResponseEntity.ok(opportunityService.getOpportunitiesByTitle(title, pageable));
+        return ResponseEntity.ok(opportunityService.getRelevantOpportunities(title, null, null, null, null, null, pageable));
     }
 
     @GetMapping("/{id}")

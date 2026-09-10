@@ -70,4 +70,12 @@ class WordPressCollectorsTest {
         assertEquals(SourceName.UPE, collector.sourceName());
         assertTrue(collector.baseUrl().contains("upe.br"));
     }
+
+    @Test
+    void testSenacPeCollectorConfig() {
+        SenacPeCollector collector = new SenacPeCollector();
+        assertEquals(SourceName.SENAC_PE, collector.sourceName());
+        assertTrue(collector.baseUrl().contains("faculdadesenacpe.edu.br"));
+        assertTrue(collector.postsEndpoint().contains("wp-json/wp/v2/posts"));
+    }
 }

@@ -51,8 +51,12 @@ class OpportunityMapperTest {
         Opportunity opportunity = mapper.toEntity(raw, result, "https://example.com/fallback.png");
 
         assertEquals("https://example.com/extracted-banner.png", opportunity.getImageUrl());
-        assertTrue(opportunity.getIsActive());
+        assertEquals(LocalDate.of(2026, 9, 2), opportunity.getExpiresAt());
         assertEquals("Workshop AI", opportunity.getTitle());
+
+        var response = mapper.toResponse(opportunity);
+        assertEquals(LocalDate.of(2026, 9, 2), response.expiresAt());
+        assertEquals("Workshop AI", response.title());
     }
 
     @Test

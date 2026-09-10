@@ -10,5 +10,7 @@ public enum SourceName {
     UNIBRA,
     UNIFAFIRE,
     SYMPLA,
-    CESAR
+    CESAR,
+    SENAC_PE,
+    FACEPE
 }

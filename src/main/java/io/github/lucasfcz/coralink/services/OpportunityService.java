@@ -12,8 +12,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.Set;
 
 /**
@@ -27,8 +25,9 @@ public class OpportunityService {
     private final OpportunityMapper opportunityMapper;
 
     // Retorna apenas oportunidades ativas segundo a regra temporal de vigência, aplicando filtros dinâmicos via JPA Specification.
-    @Cacheable(value = "opportunities", key = "{#type, #targetCourseAudiences, #modality, #isFree, #isForAll, #pageable}")
+    @Cacheable(value = "opportunities", key = "{#title, #type, #targetCourseAudiences, #modality, #isFree, #isForAll, #pageable}")
     public Page<OpportunityResponse> getRelevantOpportunities(
+            String title,
             OpportunityType type,
             Set<TargetCourseAudience> targetCourseAudiences,
             Modality modality,
@@ -36,16 +35,12 @@ public class OpportunityService {
             Boolean isForAll,
             Pageable pageable) {
 
-        var spec = OpportunitySpecifications.filters(type, targetCourseAudiences, modality, isFree, isForAll);
+        var spec = OpportunitySpecifications.filters(title, type, targetCourseAudiences, modality, isFree, isForAll);
 
         return opportunityRepository.findAll(spec, pageable).map(opportunityMapper::toResponse);
     }
 
-    public Page<OpportunityResponse> getOpportunitiesByTitle(String title, Pageable pageable) {
-        var spec = OpportunitySpecifications.activeWithTitle(title);
-        return opportunityRepository.findAll(spec, pageable).map(opportunityMapper::toResponse);
-    }
-
+    @Cacheable(value = "opportunity_detail", key = "#id")
     public OpportunityResponse getOpportunityById(Long id) {
         return opportunityRepository.findById(id)
                 .map(opportunityMapper::toResponse)
@@ -54,11 +49,7 @@ public class OpportunityService {
 
     @Cacheable(value = "opportunities_count")
     public int howManyOpportunitiesAreUpcoming() {
-        return opportunityRepository.countActiveOpportunities(
-                LocalDate.now(),
-                LocalDate.now().minusDays(3),
-                LocalDateTime.now().minusDays(45)
-        );
+        return opportunityRepository.countActiveOpportunities();
     }
 }
 

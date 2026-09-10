@@ -12,6 +12,7 @@ import java.util.Set;
 public class OpportunitySpecifications {
 
     public static Specification<Opportunity> filters(
+            String title,
             OpportunityType type,
             Set<TargetCourseAudience> targetCourseAudiences,
             Modality modality,
@@ -20,7 +21,8 @@ public class OpportunitySpecifications {
     ) {
 
         return Specification
-                .where(isActive())
+                .where(isNotExpired())
+                .and(hasTitle(title))
                 .and(hasType(type))
                 .and(hasTargetAudiences(targetCourseAudiences))
                 .and(hasModality(modality))
@@ -28,59 +30,8 @@ public class OpportunitySpecifications {
                 .and(hasIsForAll(isForAll));
     }
 
-    public static Specification<Opportunity> activeWithTitle(String title) {
-        return Specification
-                .where(isActive())
-                .and(hasTitle(title));
-    }
-
-    /**
-     * Regra de uma oportunidade ativa:
-     * 1) Boolean isActive == true (controle administrativo direto)
-     * 2) Se houver prazo de inscrição (registrationDeadline != null):
-     *    -> Prioridade absoluta: prazo de inscrição deve ser >= hoje - 3 dias (tolerância pós-encerramento).
-     * 3) Se NÃO houver prazo de inscrição (registrationDeadline == null):
-     *    a) Se houver data de início (startDate != null):
-     *       -> startDate >= hoje OU (endDate != null E endDate >= hoje).
-     *    b) Se NÃO houver data de início (startDate == null):
-     *       -> Considera-se ativa se publicada nos últimos 45 dias (createdAt > hoje - 45 dias).
-     */
-    public static Specification<Opportunity> isActive() {
-
-        return (root, query, cb) -> {
-            LocalDate today = LocalDate.now();
-            LocalDate deadlineCutoff = today.minusDays(3);
-            LocalDateTime cutoff45d = LocalDateTime.now().minusDays(45);
-
-            Predicate isActiveFlag = cb.isTrue(root.get("isActive"));
-
-            Predicate activeWhenHasDeadline = cb.and(
-                    cb.isNotNull(root.get("registrationDeadline")),
-                    cb.greaterThanOrEqualTo(root.get("registrationDeadline"), deadlineCutoff)
-            );
-
-            Predicate hasDate = cb.isNotNull(root.get("startDate"));
-            Predicate dateValid = cb.or(
-                    cb.greaterThanOrEqualTo(root.get("startDate"), today),
-                    cb.and(
-                            cb.isNotNull(root.get("endDate")),
-                            cb.greaterThanOrEqualTo(root.get("endDate"), today)
-                    )
-            );
-            Predicate activeWithDate = cb.and(hasDate, dateValid);
-
-            Predicate activeWithoutDate = cb.and(
-                    cb.isNull(root.get("startDate")),
-                    cb.greaterThan(root.get("createdAt"), cutoff45d)
-            );
-
-            Predicate activeWhenNoDeadline = cb.and(
-                    cb.isNull(root.get("registrationDeadline")),
-                    cb.or(activeWithDate, activeWithoutDate)
-            );
-
-            return cb.and(isActiveFlag, cb.or(activeWhenHasDeadline, activeWhenNoDeadline));
-        };
+    public static Specification<Opportunity> isNotExpired() {
+        return (root, query, cb) -> cb.greaterThanOrEqualTo(root.get("expiresAt"), LocalDate.now());
     }
 
     private static Specification<Opportunity> hasTitle(String title) {

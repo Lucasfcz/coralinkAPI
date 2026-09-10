@@ -29,7 +29,6 @@ public class OpportunityMapper {
                 .imageUrl(resolvedImageUrl)
                 .isFree(result.isFree())
                 .isForAll(result.isForAll())
-                .isActive(true)
                 .build();
     }
 
@@ -50,6 +49,7 @@ public class OpportunityMapper {
                 op.getSourceName(),
                 op.getImageUrl(),
                 op.getIsFree(),
-                op.getIsForAll());
+                op.getIsForAll(),
+                op.getExpiresAt());
     }
 }
