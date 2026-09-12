@@ -35,9 +35,11 @@ build/
 ### .env ###
 .env
 .env.*
+!.env.example
 
 ### IDE and Local Scratch ###
 .claude/
 .codex/
 .cursor/
 debug/
+.impeccable
