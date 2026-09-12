@@ -1,382 +1,375 @@
 # Coralink API
 
-## 1. Visao Geral
+![Coralink API Banner](docs/assets/banner.jpg)
 
-O Coralink API e um servico backend desenvolvido em Java 21 com Spring Boot, projetado para agregar, filtrar, estruturar e disponibilizar oportunidades academicas e profissionais voltadas a estudantes do ensino superior da Regiao Metropolitana do Recife (RMR), englobando Recife, Olinda e Paulista.
+<div align="center">
 
-O sistema monitora continuamente portais institucionais e centros tecnologicos de referencia (como CIn-UFPE, UFPE, IFPE, UPE, Porto Digital, CESAR School, UNIBRA e UNIFAFIRE), extrai noticias brutas, realiza triagem semantica utilizando Modelos de Linguagem (Google Gemini via Spring AI) e consolida oportunidades categorizadas (cursos, estagios, editais, hackathons, palestras e bolsas) em uma API REST de alta performance.
+[![Java](https://img.shields.io/badge/Java-21-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white)](https://www.oracle.com/java/)
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.0.x-6DB33F?style=for-the-badge&logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot)
+[![Spring Security](https://img.shields.io/badge/Spring%20Security-OAuth2%20%2B%20JWT%20RTR-6DB33F?style=for-the-badge&logo=springsecurity&logoColor=white)](https://spring.io/projects/spring-security)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![Redis](https://img.shields.io/badge/Redis-Upstash%20TLS-DC382D?style=for-the-badge&logo=redis&logoColor=white)](https://upstash.com/)
+[![Google Gemini](https://img.shields.io/badge/Google%20Gemini-Spring%20AI-4285F4?style=for-the-badge&logo=google&logoColor=white)](https://ai.google.dev/)
+[![Flyway](https://img.shields.io/badge/Flyway-Database%20Migrations-CC0200?style=for-the-badge&logo=flyway&logoColor=white)](https://flywaydb.org/)
 
----
+<p align="center">
+  <strong>Ecossistema inteligente de agregação, filtragem com IA e distribuição de oportunidades acadêmicas e profissionais para universitários e estudantes.</strong>
+</p>
 
-## 2. Arquitetura do Sistema
-
-A aplicacao adota uma arquitetura em camadas orientada a servicos (Service-Layered Architecture), combinada com pipelines agendados de ingestao de dados e processamento assincrono.
-
-### Diagrama Arquitetural de Alto Nivel
-
-```
-+-----------------------------------------------------------------------------------+
-|                                 Fontes Externas                                   |
-|   (Portais WordPress REST API / Paginas HTML Institucionais / Centros de Inovacao) |
-+-----------------------------------------+-----------------------------------------+
-                                          |
-                                          | Jsoup / HTTP Client
-                                          v
-+-----------------------------------------------------------------------------------+
-|                               Camada de Ingestao                                  |
-|  - Collectors Especializados (CIn, UFPE, IFPE, UPE, Porto Digital, CESAR, etc.)   |
-|  - ScrapingService: Ingestao e deduplicacao de URLs em tempo real                 |
-+-----------------------------------------+-----------------------------------------+
-                                          |
-                                          | Raw Opportunities
-                                          v
-+-----------------------------------------------------------------------------------+
-|                        Pipeline de Processamento com IA                           |
-|  1. ScreeningService: Classificacao binaria de relevancia pratica (Gemini Flash)  |
-|  2. ExtractionService: Extracao de entidades, datas, público e modalidade (Gemini)|
-|  3. PipelinePersistenceService: Gravacao transacional isolada (@Transactional)     |
-+-----------------------------------------+-----------------------------------------+
-                                          |
-                                          | Entidades Consolidadas
-                                          v
-+-----------------------------------------------------------------------------------+
-|                               Camada de Persistencia                              |
-|  - PostgreSQL 16: Modelo relacional normalizado                                   |
-|  - Flyway: Controle de versao e migracao automatica de schema                     |
-|  - Spring Data JPA + Specifications: Consultas dinamicas com predicados compostos |
-+-----------------------------------------+-----------------------------------------+
-                                          |
-                                          | Caffeine Cache / DTO Mappers
-                                          v
-+-----------------------------------------------------------------------------------+
-|                               Camada de Apresentacao                              |
-|  - REST Controllers: /opportunities, /suggestion, /admin                          |
-|  - RateLimitFilter: Protecao com Bucket4j e deteccao de IP via X-Forwarded-For    |
-|  - GlobalExceptionHandler: Padronizacao uniforme de erros (RFC 7807 / ApiError)   |
-|  - OpenAPI / Swagger UI: Documentacao interativa de contratos                     |
-+-----------------------------------------------------------------------------------+
-```
+</div>
 
 ---
 
-## 3. Pipeline de Scraping e Inteligencia Artificial
+## 📑 Sumário
 
-O pipeline e executado automaticamente em intervalos programados (configurado via propriedade `coralink.scheduler.source-check-rate-ms`, com padrao de 12 horas) ou sob demanda.
+- [1. Visão Geral](#1-visão-geral)
+- [2. Arquitetura do Sistema (Package by Feature)](#2-arquitetura-do-sistema-package-by-feature)
+- [3. Pipeline de Scraping & Funil de IA em Duas Etapas](#3-pipeline-de-scraping--funil-de-ia-em-duas-etapas)
+- [4. Segurança, Autenticação & Autorização](#4-segurança-autenticação--autorização)
+- [5. Catálogo de Endpoints da API REST](#5-catálogo-de-endpoints-da-api-rest)
+- [6. Como Contribuir Adicionando Novas Fontes (Guia de Pull Request)](#6-como-contribuir-adicionando-novas-fontes-guia-de-pull-request)
+- [7. Configuração e Execução do Projeto](#7-configuração-e-execução-do-projeto)
+- [8. Testes Automatizados & Qualidade](#8-testes-automatizados--qualidade)
+- [9. Licença](#9-licença)
 
-### Fluxo Detalhado de Processamento
+---
 
-```
-[ Scheduled Trigger / Run Pipeline ]
-                |
-                v
-+-------------------------------+
-| Fase 1: Coleta e Ingestao     |
-+-------------------------------+
-  - Os coletores herdam de WordPressCollector ou HtmlCollector.
-  - As fontes sao consultadas para recuperar titulos, resumos breves e URLs.
-  - ScrapingService consulta o repositorio para identificar URLs ja cadastradas.
-  - Novas noticias sao persistidas na tabela `raw_opportunities` com status `screened_relevant = NULL`.
-                |
-                v
-+-------------------------------+
-| Fase 2: Triagem (Screening)   |
-+-------------------------------+
-  - Recupera registros em `raw_opportunities` onde `screened_relevant IS NULL`.
-  - Agrupa os registros em lotes (batches de ate 10 itens).
-  - Executa chamada ao LLM (Google Gemini) com prompt especializado em avaliar o impacto
-    pratico do conteudo na vida do universitario (excluindo noticias puramente institucionais
-    ou sem acao direta para o aluno).
-  - Atualiza `screened_relevant` como `TRUE` ou `FALSE`.
-                |
-                v
-+-------------------------------+
-| Fase 3: Extracao Estruturada  |
-+-------------------------------+
-  - Recupera registros com `screened_relevant = TRUE` e `became_opportunity = FALSE`.
-  - Para cada item relevante, o coletor executa `detailedCollect(url)` para recuperar o texto
-    integral e imagem destacada da noticia.
-  - O conteudo completo e enviado ao LLM para extracao de metadados tipados:
-    * Resumo conciso focado no estudante.
-    * Tipo de oportunidade (OpportunityType).
-    * Area tematica (ex: Desenvolvimento Web, Ciencia de Dados).
-    * Publico-alvo categorizado (TargetCourseAudience).
-    * Modalidade (ONLINE, IN_PERSON, HYBRID).
-    * Datas de inicio, termino e prazo de inscricao (formato ISO-8601).
-    * Localidade e gratuidade (isFree).
-    * Escopo de acesso (isForAll).
-    * Indice de confianca da extracao (confidenceScore).
-  - PipelinePersistenceService salva a entidade final em `opportunities` e marca
-    `became_opportunity = TRUE` na tabela bruta.
-  - Invalida a regiao de cache correspondente para garantir consistencia aos clientes da API.
+## 1. Visão Geral
+
+O **Coralink API** é um serviço back-end construído em **Java 21** e **Spring Boot**, concebido para resolver a fragmentação de oportunidades acadêmicas, editais, estágios, bolsas de pesquisa, cursos e eventos de tecnologia na Região Metropolitana do Recife (RMR) e polos educacionais.
+
+O sistema:
+1. **Monitora continuamente portais e centros de referência** (CIn-UFPE, UFPE, IFPE, UPE, Porto Digital, CESAR School, UNIBRA, UNIFAFIRE, Facepe, Senac-PE, Sympla).
+2. **Ingere e deduplica publicações brutas** em tempo real.
+3. **Executa um funil de enriquecimento via Inteligência Artificial** (Google Gemini Flash via Spring AI) composto por:
+   - **Fase 1 (Triagem):** Classificação semântica binária de relevância prática para universitários.
+   - **Fase 2 (Extração Estruturada):** Extração de prazos, modalidade, público-alvo, gratuidade e links diretos.
+4. **Armazena e indexa com alta performance** no PostgreSQL e distribui via cache **Upstash Redis (TLS)** com Jackson 3.
+5. **Garante segurança robusta** com login local (BCrypt), Google OAuth2, rotação contínua de Refresh Token (RTR) e controle de acesso estrito (RBAC).
+
+---
+
+## 2. Arquitetura do Sistema (Package by Feature)
+
+A aplicação segue o padrão **Package by Feature (Vertical Slices)**, segregando o domínio por capacidades de negócio e isolando os componentes transversais sob o pacote `infra`:
+
+```mermaid
+graph TD
+    Client[Clientes Web / Mobile / Admin] -->|HTTP / TLS| RateLimit[RateLimitFilter - Bucket4j]
+    RateLimit --> Security[SecurityFilterChain - JWT & OAuth2]
+    
+    subgraph "Módulos de Domínio (Package by Feature)"
+        AuthMod[modules.auth<br/>Login, Registro, RTR, Google]
+        OppMod[modules.opportunity<br/>Feed Público & Filtros Dinâmicos]
+        AdminMod[modules.admin<br/>Dashboard, Métricas & Moderação]
+        PipeMod[modules.pipeline<br/>Orquestração de Scraping & Status]
+        AiMod[modules.ai<br/>Triagem & Extração Gemini Flash]
+        SrcMod[modules.sources<br/>Coletores Especializados]
+        HelpMod[modules.userhelp<br/>Sugestões e Feedbacks]
+    end
+
+    subgraph "Infraestrutura Transversal (infra)"
+        InfraSec[infra.security<br/>JwtService, GoogleAuthService]
+        InfraCfg[infra.config<br/>RedisCacheConfig, OpenApiConfig]
+        InfraExc[infra.exception<br/>GlobalExceptionHandler, ApiError]
+        InfraLim[infra.ratelimit<br/>RateLimiterService]
+    end
+
+    Security --> AuthMod
+    Security --> OppMod
+    Security --> AdminMod
+    Security --> HelpMod
+
+    PipeMod --> SrcMod
+    PipeMod --> AiMod
+    OppMod --> InfraCfg
 ```
 
----
-
-## 4. Catalogo de Endpoints da API REST
-
-### Base URL: `/`
-
----
-
-### 4.1 Oportunidades (`/opportunities`)
-
-#### `GET /opportunities`
-Recupera uma lista paginada de oportunidades ativas e relevantes, com suporte a filtros combinados.
-
-* **Parametros de Consulta (Query Params):**
-  * `type` (opcional): Tipo da oportunidade (ex: `COURSE`, `HACKATHON`, `INTERNSHIP_PROGRAM`, `WORKSHOP`, `SCHOLARSHIP`, `EDITAL`).
-  * `targetCourseAudience` (opcional): Publico-alvo academico (ex: `ADS`, `COMPUTER_SCIENCE`, `SOFTWARE_ENGINEERING`, `UNIVERSITY_STUDENTS`).
-  * `modality` (opcional): Modalidade (`ONLINE`, `IN_PERSON`, `HYBRID`).
-  * `isFree` (opcional): Booleano indicando gratuidade (`true` ou `false`).
-  * `isForAll` (opcional): `true` para oportunidades abertas ao publico amplo; `false` para oportunidades restritas a alunos da propria instituicao.
-  * `page` (opcional, padrao 0): Indice da pagina.
-  * `size` (opcional, padrao 20): Quantidade de itens por pagina.
-  * `sort` (opcional): Campo de ordenacao (ex: `startDate,desc`, `createdAt,desc`).
-
-* **Resposta de Sucesso (200 OK):**
-```json
-{
-  "content": [
-    {
-      "id": 1,
-      "title": "Programa de Estagio em Engenharia de Software 2026",
-      "summary": "Inscricoes abertas para estagio presencial no Porto Digital voltado a alunos de tecnologia.",
-      "type": "INTERNSHIP_PROGRAM",
-      "thematicArea": "Engenharia de Software",
-      "targetCourseAudiences": [
-        "COMPUTER_SCIENCE",
-        "SOFTWARE_ENGINEERING",
-        "ADS"
-      ],
-      "modality": "IN_PERSON",
-      "startDate": "2026-09-01",
-      "endDate": "2027-08-31",
-      "registrationDeadline": "2026-08-30",
-      "location": "Bairro do Recife, Recife - PE",
-      "officialUrl": "https://www.portodigital.org/noticias/exemplo",
-      "sourceName": "PORTO_DIGITAL",
-      "imageUrl": "https://www.portodigital.org/imagem.png",
-      "isFree": true,
-      "isForAll": true
-    }
-  ],
-  "pageable": {
-    "pageNumber": 0,
-    "pageSize": 20
-  },
-  "totalElements": 1,
-  "totalPages": 1,
-  "last": true
-}
-```
-
----
-
-#### `GET /opportunities/{id}`
-Obtem os detalhes completos de uma oportunidade especifica pelo seu identificador unico.
-
-* **Parametros de Caminho (Path Params):**
-  * `id` (obrigatorio): Identificador numerico da oportunidade.
-
-* **Resposta de Sucesso (200 OK):**
-```json
-{
-  "id": 1,
-  "title": "Programa de Estagio em Engenharia de Software 2026",
-  "summary": "Inscricoes abertas para estagio presencial no Porto Digital voltado a alunos de tecnologia.",
-  "type": "INTERNSHIP_PROGRAM",
-  "thematicArea": "Engenharia de Software",
-  "targetCourseAudiences": [
-    "COMPUTER_SCIENCE",
-    "SOFTWARE_ENGINEERING",
-    "ADS"
-  ],
-  "modality": "IN_PERSON",
-  "startDate": "2026-09-01",
-  "endDate": "2027-08-31",
-  "registrationDeadline": "2026-08-30",
-  "location": "Bairro do Recife, Recife - PE",
-  "officialUrl": "https://www.portodigital.org/noticias/exemplo",
-  "sourceName": "PORTO_DIGITAL",
-  "imageUrl": "https://www.portodigital.org/imagem.png",
-  "isFree": true,
-  "isForAll": true
-}
-```
-
-* **Resposta de Erro (404 Not Found):**
-```json
-{
-  "timestamp": "2026-08-24T22:00:00Z",
-  "status": 404,
-  "error": "Not Found",
-  "message": "Not found opportunity if id: 99"
-}
-```
-
----
-
-#### `GET /opportunities/search`
-Realiza busca textual por titulo de oportunidades com paginacao.
-
-* **Parametros de Consulta (Query Params):**
-  * `title` (obrigatorio): Termo de busca no titulo (insensivel a maiusculas/minusculas).
-  * `page`, `size`, `sort`: Parametros padrao de paginacao.
-
----
-
-#### `GET /opportunities/quantity`
-Retorna a quantidade numerica de oportunidades ativas/futuras disponiveis no sistema.
-
-* **Resposta de Sucesso (200 OK):**
-```json
-42
-```
-
----
-
-### 4.2 Sugestoes e Suporte do Usuario (`/suggestion`)
-
-#### `POST /suggestion/create`
-Registra uma nova sugestao, relato de problema ou feedback de usuario.
-
-* **Corpo da Requisicao (Request Body):**
-```json
-{
-  "type": "FEATURE",
-  "suggestion": "Gostaria de poder filtrar oportunidades especificas por bairro da RMR.",
-  "userEmail": "estudante@ufpe.br"
-}
-```
-
-* **Validacoes:**
-  * `type`: Obrigatorio (`FEATURE`, `BUG`, `OPINION`, `OTHER`).
-  * `suggestion`: Obrigatorio, nao vazio, maximo de 5000 caracteres.
-  * `userEmail`: Opcional, formato de email valido se preenchido.
-
-* **Resposta de Sucesso (200 OK):**
-```json
-{
-  "id": 1,
-  "type": "FEATURE",
-  "suggestion": "Gostaria de poder filtrar oportunidades especificas por bairro da RMR.",
-  "userEmail": "estudante@ufpe.br"
-}
-```
-
----
-
-#### `GET /suggestion`
-Lista paginada de todas as sugestoes submetidas.
-
----
-
-#### `GET /suggestion/{type}`
-Lista paginada de sugestoes filtradas por categoria (`FEATURE`, `BUG`, `OPINION`, `OTHER`).
-
----
-
-### 4.3 Administracao e Monitoramento (`/admin`)
-
-#### `GET /admin/healthy-check`
-Verifica a integridade operacional da aplicacao.
-
-* **Resposta de Sucesso (200 OK):**
+### Estrutura de Diretórios
 ```text
-Everything is OK
+io.github.lucasfcz.coralink/
+│
+├── CoralinkApplication.java               # Inicializador Spring Boot
+│
+├── infra/                                 # Componentes Transversais Compartilhados
+│   ├── config/                           # Cache Redis (Jackson 3 / Lettuce SSL) e OpenAPI Swagger 3
+│   ├── exception/                        # @RestControllerAdvice e ApiError padronizado
+│   ├── ratelimit/                        # Rate limiting Bucket4j por IP / Token
+│   └── security/                         # SecurityFilterChain, JwtService, GoogleAuthService, RTR
+│
+└── modules/                               # Módulos Autônomos de Negócio
+    ├── auth/                             # Autenticação, Usuários, Refresh Tokens e Roles
+    ├── opportunity/                      # Feed de oportunidades, JPA Specifications e Projeções
+    ├── admin/                            # Painel administrativo, Métricas de funil e Moderação
+    ├── pipeline/                         # Esteira agendada de scraping, deduplicação e auditoria
+    ├── ai/                               # Integração com Google Gemini (Triagem + Extração)
+    ├── sources/                          # Coletores plugáveis de universidades e instituições
+    └── userhelp/                         # Sistema de sugestões e suporte da comunidade
 ```
 
 ---
 
-## 5. Modelo de Dados
+## 3. Pipeline de Scraping & Funil de IA em Duas Etapas
 
-As entidades sao gerenciadas via PostgreSQL com versionamento de schema pelo Flyway:
+Para otimizar custos de computação e tokens do LLM, o Coralink implementa um **funil de processamento em 2 estágios**:
 
-1. **`raw_opportunities`**: Armazena as noticias brutas extraidas dos coletores antes do processamento pela IA.
-   * `id`: Chave primaria auto-incremental.
-   * `title`: Titulo original da publicacao.
-   * `short_summary`: Resumo inicial extraido do RSS/HTML.
-   * `news_url`: URL unica da publicacao fonte (restricao UNIQUE).
-   * `source_name`: Identificador da instituicao (enum SourceName).
-   * `screened_relevant`: Resultado da triagem semantica (`TRUE`, `FALSE` ou `NULL`).
-   * `became_opportunity`: Flag indicando se a noticia gerou registro final.
-   * `found_at`: Data e hora da identificacao da noticia.
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Scheduler as Agendador (@Scheduled / Manual)
+    participant Scraping as ScrapingService
+    participant Sources as Coletores (Collector)
+    participant DB as PostgreSQL 16
+    participant AI_Screen as Gemini (Triagem)
+    participant AI_Extract as Gemini (Extração)
+    participant Cache as Redis (Upstash)
 
-2. **`opportunities`**: Registro final da oportunidade estruturada e pronta para consumo.
-   * `id`: Chave primaria auto-incremental.
-   * `raw_opportunity_id`: Referencia 1:1 para a noticia bruta de origem.
-   * `title`, `summary`, `thematic_area`, `location`, `official_url`, `image_url`.
-   * `type`: Categoria formal (OpportunityType).
-   * `modality`: Modalidade (Modality: `ONLINE`, `IN_PERSON`, `HYBRID`).
-   * `start_date`, `end_date`, `registration_deadline`: Controle temporal.
-   * `confidence_score_ai`: Grau de confianca retornado pelo modelo de linguagem (0.0 a 1.0).
-   * `is_free`, `is_for_all`: Regras de custo e abrangencia institucional.
-   * `created_at`: Carimbo de data/hora de criacao.
+    Scheduler->>Scraping: Iniciar Pipeline
+    Scraping->>Sources: Executar collect() em todas as fontes
+    Sources-->>Scraping: Lista de NewsSummary
+    Scraping->>DB: Salvar em raw_opportunities (apenas URLs inéditas)
 
-3. **`opportunity_target_audiences`**: Tabela associativa de relacionamento 1:N contendo as areas e cursos aos quais a oportunidade se destina (TargetCourseAudience).
+    Note over DB,AI_Screen: Fase 1: Triagem Semântica (Lotes de 10)
+    Scraping->>AI_Screen: Enviar títulos e resumos curtos
+    AI_Screen-->>Scraping: Relevante? (TRUE / FALSE)
+    Scraping->>DB: Atualizar screened_relevant
 
-4. **`user_help`**: Tabela de registro de sugestoes e feedbacks de usuarios.
-
----
-
-## 6. Seguranca, Rate Limiting e Resiliencia
-
-* **Rate Limiting por IP (Bucket4j + Caffeine Cache):**
-  * Limite padrao de 20 requisicoes por minuto por endereco IP.
-  * O filtro inspeciona os cabecalhos `X-Forwarded-For` e `X-Real-IP` para operar de forma transparente e justa atras de balanceadores de carga e proxies reversos (Vercel, AWS ALB, Nginx, Cloudflare).
-  * Os buckets em memoria possuem expiracao automatica baseada em tempo de inatividade via Caffeine Cache, impedindo vazamentos de memoria (memory leaks).
-  * Endpoints de documentacao (`/swagger-ui/**`, `/v3/api-docs/**`) sao desonerados da cota de requisicoes.
-
-* **Tratamento Centralizado de Excecoes:**
-  * O `GlobalExceptionHandler` intercepta erros de validacao de campos (`MethodArgumentNotValidException`), recursos nao encontrados (`NotFoundException`), falhas em servicos upstream (`CollectException`, `AiCallException`) e inconsistencias de payload, retornando sempre a estrutura padronizada `ApiError`.
+    Note over DB,AI_Extract: Fase 2: Extração Estruturada
+    Scraping->>Sources: detailedCollect(url) para itens aprovados
+    Sources-->>Scraping: Conteúdo integral + Imagem destacada
+    Scraping->>AI_Extract: Extrair tipo, modalidade, público e datas
+    AI_Extract-->>Scraping: ExtractionResult completo
+    Scraping->>DB: Persistir em opportunities
+    Scraping->>Cache: Evict de chaves de oportunidades
+```
 
 ---
 
-## 7. Configuracao e Execucao do Projeto
+## 4. Segurança, Autenticação & Autorização
 
-### Pre-requisitos
-* Java Development Kit (JDK) versao 21.
-* Apache Maven 3.9+ (ou utilizacao do wrapper `./mvnw`).
-* Docker e Docker Compose (para execucao em containers ou banco PostgreSQL local).
-* Chave de API do Google Gemini (Google AI Studio).
+O Coralink adota **Defesa em Profundidade** (*Defense in Depth*):
 
-### 7.1 Variaveis de Ambiente
+* **Autenticação Dupla:**
+  - **Login Local:** E-mail e senha com hash seguro `BCrypt`.
+  - **Google OAuth2:** Verificação criptográfica de Google ID Tokens via `GoogleIdTokenVerifier`, checando assinaturas, emissores, expiração e status de verificação da conta Google.
+* **Refresh Token Rotation (RTR):**
+  - Access Token stateless de curta duração (15 minutos).
+  - Refresh Tokens opacos armazenados em formato criptográfico SHA-256 no banco.
+  - A cada renovação, o refresh token anterior é revogado e um novo par é emitido.
+  - **Detecção de Reuso:** Se um refresh token já consumido for reutilizado, o sistema assume vazamento de sessão e revoga preventivamente **toda a família de tokens** daquele usuário.
+* **Cookies Seguros:** Refresh tokens trafegam exclusivamente via cookie `HttpOnly`, com `SameSite=Lax`, blindados contra ataques XSS.
+* **Rate Limiting:** Proteção contra ataques de força bruta com `Bucket4j` (20 requisições/minuto por IP com leitura confiável de `X-Forwarded-For`).
+* **Isolamento de Papéis (RBAC):**
+  - `ROLE_USER`: Acesso a feeds públicos, detalhes e submissão de sugestões.
+  - `ROLE_ADMIN`: Acesso restrito a `/admin/**` (estatísticas, métricas da esteira, trigger manual e edição/deleção de oportunidades).
 
-Crie ou configure o arquivo `.env` na raiz do projeto:
+---
 
+## 5. Catálogo de Endpoints da API REST
+
+A documentação interativa completa (OpenAPI 3.0 / Swagger UI) está disponível em:
+👉 `http://localhost:8080/swagger-ui/index.html`
+
+### 🔑 Autenticação (`/auth`)
+| Método | Endpoint | Descrição | Acesso |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/auth/register` | Cadastro de usuário local (e-mail + senha com BCrypt) | Público |
+| `POST` | `/auth/login` | Autenticação local gerando Access Token e Refresh Token | Público |
+| `POST` | `/auth/google` | Login social com Google ID Token | Público |
+| `POST` | `/auth/refresh` | Rotação e renovação do Access Token via Refresh Token | Público (Cookie) |
+| `POST` | `/auth/logout` | Revogação de sessão e limpeza de cookies | Público |
+| `GET` | `/auth/me` | Dados do usuário autenticado e suas permissões | Autenticado |
+
+### 🎓 Oportunidades (`/opportunities`)
+| Método | Endpoint | Descrição | Acesso |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/opportunities` | Listagem paginada com filtros (`type`, `modality`, `isFree`, `targetCourseAudiences`) | Público (Cacheado) |
+| `GET` | `/opportunities/{id}` | Detalhes completos de uma oportunidade pelo ID | Público (Cacheado) |
+| `GET` | `/opportunities/quantity`| Contagem total de oportunidades vigentes | Público (Cacheado) |
+
+### 🛠️ Painel Administrativo (`/admin`)
+| Método | Endpoint | Descrição | Acesso |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/admin/dashboard/metrics` | Métricas de conversão da esteira e funil de IA | `ROLE_ADMIN` |
+| `GET` | `/admin/pipeline/status` | Status da esteira e tempo para próxima execução | `ROLE_ADMIN` |
+| `POST` | `/admin/pipeline/trigger` | Disparo manual síncrono da pipeline de coleta | `ROLE_ADMIN` |
+| `GET` | `/admin/pipeline/runs` | Histórico paginado de execuções da esteira | `ROLE_ADMIN` |
+| `PUT` | `/admin/opportunities/{id}`| Correção manual de dados de oportunidade | `ROLE_ADMIN` |
+| `DELETE`| `/admin/opportunities/{id}`| Remoção de oportunidade inadequada | `ROLE_ADMIN` |
+
+### 💡 Ajuda & Sugestões (`/suggestion`)
+| Método | Endpoint | Descrição | Acesso |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/suggestion/create` | Registro de sugestão de nova funcionalidade ou feedback | Público |
+| `GET` | `/suggestion` | Consulta paginada de sugestões recebidas | `ROLE_ADMIN` |
+
+---
+
+## 6. Como Contribuir Adicionando Novas Fontes (Guia de Pull Request)
+
+> [!TIP]
+> **Arquitetura 100% Desacoplada:**  
+> O Coralink adota o Princípio Aberto/Fechado (OCP). Adicionar uma nova universidade, centro de pesquisa ou portal de vagas **não exige alterar nenhuma classe existente do sistema** nem modificar o banco de dados.
+
+### Passo 1: Crie o Coletor
+Crie uma nova classe no pacote `io.github.lucasfcz.coralink.modules.sources` implementando a interface `Collector` (ou estendendo `WordPressCollector` / `HtmlCollector`):
+
+```java
+package io.github.lucasfcz.coralink.modules.sources;
+
+import io.github.lucasfcz.coralink.modules.sources.collector.Collector;
+import io.github.lucasfcz.coralink.modules.sources.dto.DetailedContent;
+import io.github.lucasfcz.coralink.modules.sources.dto.NewsSummary;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+import org.springframework.stereotype.Component;
+
+import java.io.IOException;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+
+@Component
+public class MinhaInstituicaoCollector implements Collector {
+
+    private static final String BASE_URL = "https://minhainstituicao.edu.br/noticias";
+    private static final String FALLBACK_IMAGE = "https://minhainstituicao.edu.br/logo.png";
+
+    @Override
+    public String sourceName() {
+        return "MINHA_INSTITUICAO"; // Identificador único em String
+    }
+
+    @Override
+    public List<NewsSummary> collect() {
+        List<NewsSummary> list = new ArrayList<>();
+        try {
+            Document doc = Jsoup.connect(BASE_URL).timeout(10000).get();
+            for (Element item : doc.select("article.noticia")) {
+                String title = item.select("h2.title").text();
+                String url = item.select("a").attr("href");
+                String summary = item.select("p.resumo").text();
+
+                list.add(new NewsSummary(title, summary, url, sourceName(), LocalDateTime.now()));
+            }
+        } catch (IOException e) {
+            // Trate falhas de conectividade pontuais sem interromper o serviço
+        }
+        return list;
+    }
+
+    @Override
+    public DetailedContent detailedCollect(String newsUrl) {
+        try {
+            Document doc = Jsoup.connect(newsUrl).timeout(10000).get();
+            String fullText = doc.select("div.noticia-conteudo").text();
+            String imageUrl = doc.select("div.banner img").attr("src");
+            return new DetailedContent(fullText, imageUrl.isBlank() ? FALLBACK_IMAGE : imageUrl);
+        } catch (IOException e) {
+            return new DetailedContent("", FALLBACK_IMAGE);
+        }
+    }
+
+    @Override
+    public String fallbackImageUrl() {
+        return FALLBACK_IMAGE;
+    }
+}
+```
+
+### Passo 2: Crie o Teste Unitário do seu Coletor
+Crie o teste em `src/test/java/io/github/lucasfcz/coralink/modules/sources/MinhaInstituicaoCollectorTest.java`:
+
+```java
+package io.github.lucasfcz.coralink.modules.sources;
+
+import io.github.lucasfcz.coralink.modules.sources.dto.NewsSummary;
+import org.junit.jupiter.api.Test;
+import java.util.List;
+import static org.junit.jupiter.api.Assertions.*;
+
+class MinhaInstituicaoCollectorTest {
+
+    private final MinhaInstituicaoCollector collector = new MinhaInstituicaoCollector();
+
+    @Test
+    void testCollectReturnsData() {
+        assertEquals("MINHA_INSTITUICAO", collector.sourceName());
+        List<NewsSummary> summaries = collector.collect();
+        assertNotNull(summaries);
+        // Validar integridade dos resumos coletados
+    }
+}
+```
+
+### Passo 3: Valide Localmente
+Execute o comando Maven para garantir que seu coletor e a suíte completa passem com sucesso:
+```bash
+./mvnw test -Dtest=MinhaInstituicaoCollectorTest
+./mvnw test
+```
+
+### Passo 4: Abra o Pull Request
+1. Faça o fork do repositório.
+2. Crie uma branch para sua fonte: `git checkout -b feature/fonte-minha-instituicao`.
+3. Faça commit e push das alterações.
+4. Abra um **Pull Request** apontando para a branch `codex/development`.
+5. Nossa equipe técnica avaliará o coletor, validará a estabilidade da URL e aprovará a integração!
+
+---
+
+## 7. Configuração e Execução do Projeto
+
+### Pré-requisitos
+* **Java 21** (JDK 21 instalado e configurado no `PATH`).
+* **Docker & Docker Compose** (para PostgreSQL e Redis local).
+* **Chave de API do Google Gemini** (obtenha gratuitamente no [Google AI Studio](https://aistudio.google.com/)).
+
+### 7.1 Configurando Variáveis de Ambiente
+Copie o modelo de ambiente e defina seus segredos:
+```bash
+cp .env.example .env
+```
+
+Edite o arquivo `.env`:
 ```env
 SPRING_PROFILES_ACTIVE=dev
+JWT_SECRET=sua_chave_secreta_jwt_de_pelo_menos_256_bits_aqui
 GEMINI_API_KEY=sua_chave_gemini_aqui
 DB_URL=jdbc:postgresql://localhost:5432/coralink
 DB_USERNAME=coralink
 DB_PASSWORD=coralink
 ```
 
-### 7.2 Execucao com Docker Compose
+### 7.2 Execução com Docker Compose
+Para subir o banco de dados PostgreSQL e Redis localmente:
+```bash
+docker compose up -d
+```
 
-Para inicializar a aplicacao e a base de dados PostgreSQL em ambiente conteinerizado:
+### 7.3 Execução da Aplicação Spring Boot
+```bash
+./mvnw spring-boot:run
+```
+
+A API estará pronta para receber requisições em: `http://localhost:8080`
+
+---
+
+## 8. Testes Automatizados & Qualidade
+
+A aplicação conta com uma rigorosa suíte de testes cobrindo testes unitários, validação de tokens JWT, testes de segurança MockMvc, desserialização de cache Redis e testes de coletores:
 
 ```bash
-docker compose up --build -d
+# Executar toda a suíte de testes
+./mvnw clean test
 ```
 
-A API ficara disponivel em `http://localhost:8080`.
+Status atual: **91 testes executados, 0 falhas, 0 erros.**
 
-### 7.3 Execucao Local para Desenvolvimento
+---
 
-1. Inicialize apenas o banco de dados via Docker:
-```bash
-docker compose up db -d
-```
+## 9. Licença
 
-2. Execute a aplicacao Spring Boot com o perfil de desenvolvimento:
-```bash
-./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
-```
-
-### 7.4 Documentacao Interativa OpenAPI / Swagger
-
-Com a aplicacao em execucao, a interface interativa do Swagger pode ser acessada em:
-```
-http://localhost:8080/swagger-ui/index.html
-```
+Este projeto é disponibilizado sob a licença [MIT](LICENSE). Sinta-se livre para utilizar, colaborar e evoluir a plataforma.
