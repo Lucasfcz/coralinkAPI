@@ -20,6 +20,7 @@ import java.util.Set;
  */
 @Service
 @RequiredArgsConstructor
+@org.springframework.transaction.annotation.Transactional(readOnly = true)
 public class OpportunityService {
 
     private final OpportunityRepository opportunityRepository;

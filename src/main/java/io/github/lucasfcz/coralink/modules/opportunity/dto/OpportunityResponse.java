@@ -24,4 +24,11 @@ public record OpportunityResponse(
         Boolean isFree,
         Boolean isForAll,
         LocalDate expiresAt
-) { }
+) {
+    public OpportunityResponse {
+        targetCourseAudiences = (targetCourseAudiences != null)
+                ? new java.util.HashSet<>(targetCourseAudiences)
+                : java.util.Collections.emptySet();
+    }
+}
+

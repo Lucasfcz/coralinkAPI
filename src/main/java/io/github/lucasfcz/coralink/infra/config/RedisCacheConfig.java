@@ -123,7 +123,7 @@ public class RedisCacheConfig {
         RedisSerializer<Object> jsonSerializer = createJsonSerializer();
 
         RedisCacheConfiguration defaultConfig = RedisCacheConfiguration.defaultCacheConfig()
-                .prefixCacheNameWith("coralink:cache:")
+                .prefixCacheNameWith("coralink:cache:v2:")
                 .entryTtl(Duration.ofMinutes(15))
                 .disableCachingNullValues()
                 .serializeKeysWith(RedisSerializationContext.SerializationPair.fromSerializer(RedisSerializer.string()))
