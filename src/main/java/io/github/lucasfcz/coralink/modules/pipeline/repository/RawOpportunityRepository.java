@@ -18,6 +18,12 @@ public interface RawOpportunityRepository extends JpaRepository<RawOpportunity, 
 
     List<RawOpportunity> findByScreenedRelevantIsTrueAndBecameOpportunityIsFalse();
 
+    List<RawOpportunity> findByScreenedRelevantIsTrueAndBecameOpportunityIsFalseAndExtractionAttemptsLessThan(int maxAttempts);
+
+    Page<RawOpportunity> findByScreenedRelevantIsTrueAndBecameOpportunityIsFalseAndExtractionAttemptsGreaterThanEqualOrderByFoundAtDesc(int minAttempts, Pageable pageable);
+
+    long countByScreenedRelevantIsTrueAndBecameOpportunityIsFalseAndExtractionAttemptsGreaterThanEqual(int minAttempts);
+
     List<RawOpportunity> findByScreenedRelevantIsNull();
 
     Page<RawOpportunity> findByPipelineRunId(Long pipelineRunId, Pageable pageable);

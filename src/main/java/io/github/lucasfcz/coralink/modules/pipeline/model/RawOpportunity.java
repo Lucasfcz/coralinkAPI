@@ -50,6 +50,12 @@ public class RawOpportunity {
     @Column(name = "pipeline_run_id")
     private Long pipelineRunId;
 
+    @Column(name = "extraction_attempts", nullable = false)
+    private int extractionAttempts = 0;
+
+    @Column(name = "last_extraction_error")
+    private String lastExtractionError;
+
     public RawOpportunity(String title, String shortSummary, String newsUrl, String sourceName,
                           Boolean screenedRelevant, Boolean becameOpportunity) {
         this.title = title;
@@ -70,5 +76,10 @@ public class RawOpportunity {
 
     public void assignPipelineRun(Long pipelineRunId) {
         this.pipelineRunId = pipelineRunId;
+    }
+
+    public void recordExtractionFailure(String error) {
+        this.extractionAttempts++;
+        this.lastExtractionError = error;
     }
 }

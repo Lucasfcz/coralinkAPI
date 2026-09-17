@@ -19,6 +19,18 @@ public class OpportunitySpecifications {
             Boolean isFree,
             Boolean isForAll
     ) {
+        return filters(title, type, targetCourseAudiences, modality, null, isFree, isForAll);
+    }
+
+    public static Specification<Opportunity> filters(
+            String title,
+            OpportunityType type,
+            Set<TargetCourseAudience> targetCourseAudiences,
+            Modality modality,
+            String sourceName,
+            Boolean isFree,
+            Boolean isForAll
+    ) {
 
         return Specification
                 .where(isNotExpired())
@@ -26,6 +38,7 @@ public class OpportunitySpecifications {
                 .and(hasType(type))
                 .and(hasTargetAudiences(targetCourseAudiences))
                 .and(hasModality(modality))
+                .and(hasSourceName(sourceName))
                 .and(hasIsFree(isFree))
                 .and(hasIsForAll(isForAll));
     }
@@ -72,5 +85,11 @@ public class OpportunitySpecifications {
         return (root, query, cb) -> isForAll == null
                 ? null
                 : cb.equal(root.get("isForAll"), isForAll);
+    }
+
+    private static Specification<Opportunity> hasSourceName(String sourceName) {
+        return (root, query, cb) -> (sourceName == null || sourceName.isBlank())
+                ? null
+                : cb.equal(cb.upper(root.get("sourceName")), sourceName.trim().toUpperCase());
     }
 }

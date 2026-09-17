@@ -82,7 +82,7 @@ class OpportunityControllerTest {
         OpportunityResponse response = buildSampleResponse(1L, "Curso de Java");
         Page<OpportunityResponse> page = new PageImpl<>(List.of(response), PageRequest.of(0, 10), 1);
 
-        when(opportunityService.getRelevantOpportunities(any(), any(), any(), any(), any(), any(), any(Pageable.class)))
+        when(opportunityService.getRelevantOpportunities(any(), any(), any(), any(), any(), any(), any(), any(Pageable.class)))
                 .thenReturn(page);
 
         mockMvc.perform(get("/opportunities")
@@ -107,6 +107,7 @@ class OpportunityControllerTest {
                 eq(OpportunityType.COURSE),
                 eq(Set.of(TargetCourseAudience.COMPUTER_SCIENCE)),
                 eq(Modality.ONLINE),
+                eq("UFPE"),
                 eq(true),
                 eq(true),
                 any(Pageable.class)))
@@ -117,6 +118,7 @@ class OpportunityControllerTest {
                         .param("type", "COURSE")
                         .param("targetCourseAudience", "COMPUTER_SCIENCE")
                         .param("modality", "ONLINE")
+                        .param("sourceName", "UFPE")
                         .param("isFree", "true")
                         .param("isForAll", "true")
                         .contentType(MediaType.APPLICATION_JSON))
@@ -127,6 +129,7 @@ class OpportunityControllerTest {
                 eq(OpportunityType.COURSE),
                 eq(Set.of(TargetCourseAudience.COMPUTER_SCIENCE)),
                 eq(Modality.ONLINE),
+                eq("UFPE"),
                 eq(true),
                 eq(true),
                 any(Pageable.class)

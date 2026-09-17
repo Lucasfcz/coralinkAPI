@@ -24,7 +24,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-
+import org.springframework.http.MediaType;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -81,7 +81,7 @@ class SecurityAccessControlTest {
     @DisplayName("Public Access - GET /opportunities should be accessible anonymously (200 OK)")
     void publicEndpointsShouldBeAccessibleWithoutAuth() throws Exception {
         Page<OpportunityResponse> emptyPage = new PageImpl<>(List.of());
-        when(opportunityService.getRelevantOpportunities(any(), any(), any(), any(), any(), any(), any(Pageable.class)))
+        when(opportunityService.getRelevantOpportunities(any(), any(), any(), any(), any(), any(), any(), any(Pageable.class)))
                 .thenReturn(emptyPage);
 
         mockMvc.perform(get("/opportunities"))
@@ -151,5 +151,100 @@ class SecurityAccessControlTest {
     void listSuggestionsShouldBeForbiddenForUserRole() throws Exception {
         mockMvc.perform(get("/suggestion"))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("Security Defense - Anonymous POST /suggestion/create must return 401 Unauthorized")
+    void createSuggestionShouldBeUnauthorizedForAnonymous() throws Exception {
+        String requestJson = """
+                {
+                    "type": "FEATURE",
+                    "suggestion": "Sugestão de nova funcionalidade",
+                    "userEmail": "aluno@ufpe.br"
+                }
+                """;
+
+        mockMvc.perform(post("/suggestion/create")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestJson))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @DisplayName("Security Success - Authenticated USER role POST /suggestion/create must return 201 Created")
+    @WithMockUser(username = "estudante@ufpe.br", roles = {"USER"})
+    void createSuggestionShouldSucceedForAuthenticatedUser() throws Exception {
+        io.github.lucasfcz.coralink.modules.auth.model.User mockUser = new io.github.lucasfcz.coralink.modules.auth.model.User(
+                "estudante@ufpe.br",
+                "Estudante Teste",
+                null,
+                null,
+                io.github.lucasfcz.coralink.modules.auth.model.Role.ROLE_USER
+        );
+        when(authService.getCurrentAuthenticatedUser()).thenReturn(mockUser);
+
+        io.github.lucasfcz.coralink.modules.userhelp.dto.UserHelpResponse mockResponse =
+                new io.github.lucasfcz.coralink.modules.userhelp.dto.UserHelpResponse(
+                        1L,
+                        io.github.lucasfcz.coralink.modules.userhelp.model.SuggestionType.FEATURE,
+                        "Sugestão de nova funcionalidade",
+                        "estudante@ufpe.br"
+                );
+        when(userHelpService.createUserHelp(any(), any())).thenReturn(mockResponse);
+
+        String requestJson = """
+                {
+                    "type": "FEATURE",
+                    "suggestion": "Sugestão de nova funcionalidade",
+                    "userEmail": "estudante@ufpe.br"
+                }
+                """;
+
+        mockMvc.perform(post("/suggestion/create")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestJson))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.id").value(1))
+                .andExpect(jsonPath("$.type").value("FEATURE"));
+    }
+
+    @Test
+    @DisplayName("Security Success - CORS pre-flight from http://localhost:3002 must be allowed")
+    void corsShouldAllowLocalhost3002() throws Exception {
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options("/opportunities/feed")
+                        .header("Origin", "http://localhost:3002")
+                        .header("Access-Control-Request-Method", "GET"))
+                .andExpect(status().isOk())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header().string("Access-Control-Allow-Origin", "http://localhost:3002"))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header().string("Access-Control-Allow-Credentials", "true"));
+    }
+
+    @Test
+    @DisplayName("Security Defense - USER role access to /admin/pipeline/failed-extractions must return 403 Forbidden")
+    @WithMockUser(username = "estudante@ufpe.br", roles = {"USER"})
+    void failedExtractionsShouldBeForbiddenForUserRole() throws Exception {
+        mockMvc.perform(get("/admin/pipeline/failed-extractions"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("Security Success - ADMIN role access to /admin/pipeline/failed-extractions must return 200 OK")
+    @WithMockUser(username = "admin@coralink.com", roles = {"ADMIN"})
+    void failedExtractionsShouldSucceedForAdminRole() throws Exception {
+        when(adminDashboardService.getFailedExtractions(any()))
+                .thenReturn(new PageImpl<>(List.of()));
+
+        mockMvc.perform(get("/admin/pipeline/failed-extractions"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("Security Success - ADMIN role access to DELETE /admin/opportunities/{id} triggers softDeleteOpportunity")
+    @WithMockUser(username = "admin@coralink.com", roles = {"ADMIN"})
+    void adminDeleteOpportunityShouldTriggerSoftDelete() throws Exception {
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete("/admin/opportunities/10"))
+                .andExpect(status().isNoContent());
+
+        org.mockito.Mockito.verify(opportunityService).softDeleteOpportunity(10L);
     }
 }

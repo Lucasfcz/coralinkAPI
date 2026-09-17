@@ -13,6 +13,20 @@ public record DashboardMetricsResponse(
         double aiScreeningAcceptanceRate,
         Map<String, Long> opportunitiesByType,
         Map<String, Long> opportunitiesBySource,
-        long pendingUserSuggestions
+        long pendingUserSuggestions,
+        long failedExtractionsCount
 ) {
+    public DashboardMetricsResponse(
+            long totalActiveOpportunities,
+            long totalRawCollected,
+            long totalScreenedRelevant,
+            long totalScreenedIrrelevant,
+            double aiScreeningAcceptanceRate,
+            Map<String, Long> opportunitiesByType,
+            Map<String, Long> opportunitiesBySource,
+            long pendingUserSuggestions
+    ) {
+        this(totalActiveOpportunities, totalRawCollected, totalScreenedRelevant, totalScreenedIrrelevant,
+                aiScreeningAcceptanceRate, opportunitiesByType, opportunitiesBySource, pendingUserSuggestions, 0L);
+    }
 }

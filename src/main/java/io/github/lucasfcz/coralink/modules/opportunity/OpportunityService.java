@@ -3,15 +3,15 @@ package io.github.lucasfcz.coralink.modules.opportunity;
 import io.github.lucasfcz.coralink.modules.opportunity.dto.OpportunityResponse;
 import io.github.lucasfcz.coralink.modules.opportunity.enums.*;
 import io.github.lucasfcz.coralink.infra.exception.NotFoundException;
-import io.github.lucasfcz.coralink.modules.opportunity.OpportunityMapper;
 import io.github.lucasfcz.coralink.modules.opportunity.model.Opportunity;
 import io.github.lucasfcz.coralink.modules.opportunity.repository.OpportunityRepository;
-import io.github.lucasfcz.coralink.modules.opportunity.OpportunitySpecifications;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Set;
 
@@ -20,14 +20,13 @@ import java.util.Set;
  */
 @Service
 @RequiredArgsConstructor
-@org.springframework.transaction.annotation.Transactional(readOnly = true)
+@Transactional(readOnly = true)
 public class OpportunityService {
 
     private final OpportunityRepository opportunityRepository;
     private final OpportunityMapper opportunityMapper;
 
     // Retorna apenas oportunidades ativas segundo a regra temporal de vigência, aplicando filtros dinâmicos via JPA Specification.
-    @Cacheable(value = "opportunities", key = "{#title, #type, #targetCourseAudiences, #modality, #isFree, #isForAll, #pageable}")
     public Page<OpportunityResponse> getRelevantOpportunities(
             String title,
             OpportunityType type,
@@ -36,8 +35,21 @@ public class OpportunityService {
             Boolean isFree,
             Boolean isForAll,
             Pageable pageable) {
+        return getRelevantOpportunities(title, type, targetCourseAudiences, modality, null, isFree, isForAll, pageable);
+    }
 
-        var spec = OpportunitySpecifications.filters(title, type, targetCourseAudiences, modality, isFree, isForAll);
+    @Cacheable(value = "opportunities", key = "{#title, #type, #targetCourseAudiences, #modality, #sourceName, #isFree, #isForAll, #pageable}")
+    public Page<OpportunityResponse> getRelevantOpportunities(
+            String title,
+            OpportunityType type,
+            Set<TargetCourseAudience> targetCourseAudiences,
+            Modality modality,
+            String sourceName,
+            Boolean isFree,
+            Boolean isForAll,
+            Pageable pageable) {
+
+        var spec = OpportunitySpecifications.filters(title, type, targetCourseAudiences, modality, sourceName, isFree, isForAll);
 
         return opportunityRepository.findAll(spec, pageable).map(opportunityMapper::toResponse);
     }
@@ -58,8 +70,8 @@ public class OpportunityService {
      * Atualização administrativa de oportunidade.
      * Invalida todo o cache Redis de oportunidades para que os usuários vejam as correções imediatamente.
      */
-    @org.springframework.cache.annotation.CacheEvict(value = {"opportunities", "opportunity_detail", "opportunities_count"}, allEntries = true)
-    @org.springframework.transaction.annotation.Transactional
+    @CacheEvict(value = {"opportunities", "opportunity_detail", "opportunities_count"}, allEntries = true)
+    @Transactional
     public OpportunityResponse updateOpportunity(Long id, io.github.lucasfcz.coralink.modules.admin.dto.AdminOpportunityUpdateRequest request) {
         Opportunity opportunity = opportunityRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Oportunidade não encontrada com o id: " + id));
@@ -90,13 +102,14 @@ public class OpportunityService {
      * Exclusão administrativa de oportunidade errônea ou indesejada.
      * Invalida todo o cache Redis atômica e imediatamente.
      */
-    @org.springframework.cache.annotation.CacheEvict(value = {"opportunities", "opportunity_detail", "opportunities_count"}, allEntries = true)
-    @org.springframework.transaction.annotation.Transactional
-    public void deleteOpportunity(Long id) {
-        if (!opportunityRepository.existsById(id)) {
-            throw new NotFoundException("Oportunidade não encontrada com o id: " + id);
-        }
-        opportunityRepository.deleteById(id);
+    @CacheEvict(value = {"opportunities", "opportunity_detail", "opportunities_count"}, allEntries = true)
+    @Transactional
+    public void softDeleteOpportunity(Long id) {
+
+        Opportunity opportunity = opportunityRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Oportunidade com id: " + id + " nao encontrada"));
+        opportunity.makeOpportunityExpirates();
+        opportunityRepository.save(opportunity);
     }
 }
 

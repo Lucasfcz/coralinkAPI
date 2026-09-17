@@ -12,7 +12,8 @@ public class UserHelpMapper {
                 userHelp.getId(),
                 userHelp.getType(),
                 userHelp.getSuggestion(),
-                userHelp.getUserEmail()
+                userHelp.getUserEmail(),
+                userHelp.getCreatedAt()
         );
     }
 }
