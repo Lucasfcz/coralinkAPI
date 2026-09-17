@@ -161,7 +161,9 @@ O Coralink adota **Defesa em Profundidade** (*Defense in Depth*):
 * **Rate Limiting:** Proteção contra ataques de força bruta com `Bucket4j` (20 requisições/minuto por IP com leitura confiável de `X-Forwarded-For`).
 * **Isolamento de Papéis (RBAC):**
   - `ROLE_USER`: Acesso a feeds públicos, detalhes e submissão de sugestões.
-  - `ROLE_ADMIN`: Acesso restrito a `/admin/**` (estatísticas, métricas da esteira, trigger manual e edição/deleção de oportunidades).
+  - `ROLE_ADMIN`: Acesso restrito a `/admin/**` (estatísticas, métricas da esteira, trigger manual, inspeção de lotes e edição/soft-delete de oportunidades).
+* **Resiliência e Tolerância a Falhas no Cache:**
+  - Implementação de `CacheErrorHandler` customizado via `CachingConfigurer`. Em cenários de indisponibilidade, timeout ou erro de desserialização no Upstash Redis, a API executa um fallback transparente para o PostgreSQL sem interromper as requisições dos usuários.
 
 ---
 
@@ -184,18 +186,21 @@ A documentação interativa completa (OpenAPI 3.0 / Swagger UI) está disponíve
 | Método | Endpoint | Descrição | Acesso |
 | :--- | :--- | :--- | :--- |
 | `GET` | `/opportunities` | Listagem paginada com filtros (`type`, `modality`, `isFree`, `targetCourseAudiences`) | Público (Cacheado) |
-| `GET` | `/opportunities/{id}` | Detalhes completos de uma oportunidade pelo ID | Público (Cacheado) |
 | `GET` | `/opportunities/quantity`| Contagem total de oportunidades vigentes | Público (Cacheado) |
+| `GET` | `/opportunities/search` | Busca de oportunidades por termo no título ou descrição | Público (Cacheado) |
+| `GET` | `/opportunities/{id}` | Detalhes completos de uma oportunidade pelo ID | Público (Cacheado) |
 
 ### 🛠️ Painel Administrativo (`/admin`)
 | Método | Endpoint | Descrição | Acesso |
 | :--- | :--- | :--- | :--- |
-| `GET` | `/admin/dashboard/metrics` | Métricas de conversão da esteira e funil de IA | `ROLE_ADMIN` |
-| `GET` | `/admin/pipeline/status` | Status da esteira e tempo para próxima execução | `ROLE_ADMIN` |
+| `GET` | `/admin/dashboard/metrics` | Métricas de conversão da esteira, funil de IA e contagem de falhas | `ROLE_ADMIN` |
+| `GET` | `/admin/pipeline/status` | Status em tempo real da esteira e tempo para próxima execução | `ROLE_ADMIN` |
 | `POST` | `/admin/pipeline/trigger` | Disparo manual síncrono da pipeline de coleta | `ROLE_ADMIN` |
 | `GET` | `/admin/pipeline/runs` | Histórico paginado de execuções da esteira | `ROLE_ADMIN` |
-| `PUT` | `/admin/opportunities/{id}`| Correção manual de dados de oportunidade | `ROLE_ADMIN` |
-| `DELETE`| `/admin/opportunities/{id}`| Remoção de oportunidade inadequada | `ROLE_ADMIN` |
+| `GET` | `/admin/pipeline/runs/{id}/items` | Inspeção detalhada dos itens brutos coletados em uma execução | `ROLE_ADMIN` |
+| `GET` | `/admin/pipeline/failed-extractions` | Consulta paginada de oportunidades com falhas persistentes de IA | `ROLE_ADMIN` |
+| `PUT` | `/admin/opportunities/{id}`| Correção manual de dados cadastrais e expiração | `ROLE_ADMIN` |
+| `DELETE`| `/admin/opportunities/{id}`| Soft delete de oportunidade (expiração retroativa para ontem) | `ROLE_ADMIN` |
 
 ### 💡 Ajuda & Sugestões (`/suggestion`)
 | Método | Endpoint | Descrição | Acesso |
@@ -366,7 +371,7 @@ A aplicação conta com uma rigorosa suíte de testes cobrindo testes unitários
 ./mvnw clean test
 ```
 
-Status atual: **91 testes executados, 0 falhas, 0 erros.**
+Status atual: **97 testes executados, 0 falhas, 0 erros.**
 
 ---
 
