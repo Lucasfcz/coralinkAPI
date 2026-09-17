@@ -220,6 +220,17 @@ class SecurityAccessControlTest {
     }
 
     @Test
+    @DisplayName("Security Success - CORS pre-flight from https://coralink.vercel.app must be allowed")
+    void corsShouldAllowVercelProduction() throws Exception {
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options("/auth/google")
+                        .header("Origin", "https://coralink.vercel.app")
+                        .header("Access-Control-Request-Method", "POST"))
+                .andExpect(status().isOk())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header().string("Access-Control-Allow-Origin", "https://coralink.vercel.app"))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header().string("Access-Control-Allow-Credentials", "true"));
+    }
+
+    @Test
     @DisplayName("Security Defense - USER role access to /admin/pipeline/failed-extractions must return 403 Forbidden")
     @WithMockUser(username = "estudante@ufpe.br", roles = {"USER"})
     void failedExtractionsShouldBeForbiddenForUserRole() throws Exception {
