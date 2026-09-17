@@ -5,6 +5,8 @@ import io.github.lucasfcz.coralink.modules.userhelp.dto.UserHelpRequest;
 import io.github.lucasfcz.coralink.modules.userhelp.dto.UserHelpResponse;
 import io.github.lucasfcz.coralink.modules.userhelp.model.SuggestionType;
 import io.github.lucasfcz.coralink.modules.userhelp.UserHelpService;
+import io.github.lucasfcz.coralink.modules.auth.AuthService;
+import io.github.lucasfcz.coralink.modules.auth.model.User;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -25,19 +27,23 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/suggestion")
 @RequiredArgsConstructor
-@Tag(name = "Sugestões e Ajuda", description = "Envio público de feedback/sugestões por estudantes e consulta por administradores")
+@Tag(name = "Sugestões e Ajuda", description = "Envio de feedback/sugestões por estudantes autenticados e consulta por administradores")
 public class UserHelpController {
 
     private final UserHelpService userHelpService;
+    private final AuthService authService;
 
     @Operation(
             summary = "Envio de Sugestão ou Pedido de Ajuda",
-            description = "Endpoint público para qualquer estudante enviar sugestões de melhoria, novas fontes ou reportar problemas."
+            description = "Endpoint restrito a estudantes autenticados para envio de sugestões de melhoria, novas fontes ou reportar problemas."
     )
     @ApiResponse(responseCode = "201", description = "Sugestão registrada com sucesso")
+    @ApiResponse(responseCode = "401", description = "Não autenticado")
+    @SecurityRequirement(name = OpenApiConfig.SECURITY_SCHEME_NAME)
     @PostMapping("/create")
     public ResponseEntity<UserHelpResponse> createUserHelp(@Valid @RequestBody UserHelpRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(userHelpService.createUserHelp(request));
+        User currentUser = authService.getCurrentAuthenticatedUser();
+        return ResponseEntity.status(HttpStatus.CREATED).body(userHelpService.createUserHelp(request, currentUser));
     }
 
     @Operation(

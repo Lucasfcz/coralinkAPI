@@ -30,6 +30,10 @@ public class UserHelp {
     @Column
     private String userEmail;
 
+    @org.hibernate.annotations.CreationTimestamp
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private java.time.LocalDateTime createdAt;
+
     public UserHelp(SuggestionType type, String suggestion, String userEmail) {
         this.type = type;
         this.suggestion = suggestion;

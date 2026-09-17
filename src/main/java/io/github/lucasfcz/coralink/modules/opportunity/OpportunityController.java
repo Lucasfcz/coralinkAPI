@@ -1,21 +1,17 @@
 package io.github.lucasfcz.coralink.modules.opportunity;
 
-import io.github.lucasfcz.coralink.modules.admin.dto.AdminOpportunityUpdateRequest;
 import io.github.lucasfcz.coralink.modules.opportunity.dto.OpportunityResponse;
 import io.github.lucasfcz.coralink.modules.opportunity.enums.Modality;
 import io.github.lucasfcz.coralink.modules.opportunity.enums.OpportunityType;
 import io.github.lucasfcz.coralink.modules.opportunity.enums.TargetCourseAudience;
-import io.github.lucasfcz.coralink.modules.opportunity.OpportunityService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Set;
@@ -43,10 +39,11 @@ public class OpportunityController {
             @Parameter(description = "Tipo/categoria da oportunidade (ex: HACKATHON, EVENT, INTERNSHIP)") @RequestParam(required = false) OpportunityType type,
             @Parameter(description = "Cursos ou públicos-alvo recomendados") @RequestParam(required = false) Set<TargetCourseAudience> targetCourseAudience,
             @Parameter(description = "Modalidade de realização (IN_PERSON, ONLINE, HYBRID)") @RequestParam(required = false) Modality modality,
+            @Parameter(description = "Fonte ou instituição de origem (ex: UFPE, CESAR_SCHOOL, CIN_UFPE)") @RequestParam(required = false) String sourceName,
             @Parameter(description = "Filtro de gratuidade (true = gratuita, false = paga)") @RequestParam(required = false) Boolean isFree,
-            @Parameter(description = "Se true, lista apenas vagas abertas a qualquer estudante de qualquer faculdade") @RequestParam(required = false) Boolean isForAll,
+            @Parameter(description = "Se false, significa que apenas estudantes da faculdade podem participar") @RequestParam(required = false) Boolean isForAll,
             Pageable pageable) {
-        return ResponseEntity.ok(opportunityService.getRelevantOpportunities(title, type, targetCourseAudience, modality, isFree, isForAll, pageable));
+        return ResponseEntity.ok(opportunityService.getRelevantOpportunities(title, type, targetCourseAudience, modality, sourceName, isFree, isForAll, pageable));
     }
 
     @Operation(
@@ -62,6 +59,16 @@ public class OpportunityController {
     }
 
     @Operation(
+            summary = "Quantidade Total de Oportunidades Vigentes",
+            description = "Contagem total de oportunidades ativas cuja data limite ainda não expirou. Cache de 30 minutos no Redis."
+    )
+    @ApiResponse(responseCode = "200", description = "Quantidade calculada com sucesso")
+    @GetMapping("/quantity")
+    public ResponseEntity<Integer> quantityOfOpportunities() {
+        return ResponseEntity.ok(opportunityService.howManyOpportunitiesAreUpcoming());
+    }
+
+    @Operation(
             summary = "Detalhes de uma Oportunidade",
             description = "Retorna todos os dados detalhados de uma oportunidade a partir do seu ID. Consulta otimizada com cache Redis de 2 horas."
     )
@@ -71,45 +78,5 @@ public class OpportunityController {
     public ResponseEntity<OpportunityResponse> findOpportunityById(
             @Parameter(description = "Identificador único da oportunidade") @PathVariable Long id) {
         return ResponseEntity.ok(opportunityService.getOpportunityById(id));
-    }
-
-    @Operation(
-            summary = "Atualização Administrativa de Oportunidade",
-            description = "Permite corrigir títulos, prazos, resumos ou filtros de uma oportunidade após a extração por IA. Invalida o cache Redis automaticamente."
-    )
-    @ApiResponse(responseCode = "200", description = "Oportunidade atualizada com sucesso")
-    @ApiResponse(responseCode = "404", description = "Oportunidade não encontrada")
-    @PreAuthorize("hasRole('ADMIN')")
-    @PatchMapping("{id}")
-    public ResponseEntity<OpportunityResponse> updateOpportunity(
-            @Parameter(description = "Identificador da oportunidade") @PathVariable Long id,
-            @Valid @RequestBody AdminOpportunityUpdateRequest request
-    ) {
-        return ResponseEntity.ok(opportunityService.updateOpportunity(id, request));
-    }
-
-    @Operation(
-            summary = "Exclusão Administrativa de Oportunidade",
-            description = "Exclui definitivamente uma oportunidade inadequada. Invalida o cache Redis correspondente."
-    )
-    @ApiResponse(responseCode = "204", description = "Oportunidade excluída com sucesso")
-    @ApiResponse(responseCode = "404", description = "Oportunidade não encontrada")
-    @PreAuthorize("hasRole('ADMIN')")
-    @DeleteMapping("{id}")
-    public ResponseEntity<Void> deleteOpportunity(
-            @Parameter(description = "Identificador da oportunidade a ser excluída") @PathVariable Long id
-    ) {
-        opportunityService.deleteOpportunity(id);
-        return ResponseEntity.noContent().build();
-    }
-
-    @Operation(
-            summary = "Quantidade Total de Oportunidades Vigentes",
-            description = "Contagem total de oportunidades ativas cuja data limite ainda não expirou. Cache de 30 minutos no Redis."
-    )
-    @ApiResponse(responseCode = "200", description = "Quantidade calculada com sucesso")
-    @GetMapping("/quantity")
-    public ResponseEntity<Integer> quantityOfOpportunities() {
-        return ResponseEntity.ok(opportunityService.howManyOpportunitiesAreUpcoming());
     }
 }

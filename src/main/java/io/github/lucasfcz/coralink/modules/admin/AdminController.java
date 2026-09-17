@@ -5,10 +5,8 @@ import io.github.lucasfcz.coralink.modules.admin.dto.AdminOpportunityUpdateReque
 import io.github.lucasfcz.coralink.modules.admin.dto.DashboardMetricsResponse;
 import io.github.lucasfcz.coralink.modules.opportunity.dto.OpportunityResponse;
 import io.github.lucasfcz.coralink.modules.pipeline.dto.PipelineRunResponse;
-import io.github.lucasfcz.coralink.modules.pipeline.dto.PipelineRunResult;
 import io.github.lucasfcz.coralink.modules.pipeline.dto.PipelineStatusResponse;
 import io.github.lucasfcz.coralink.modules.pipeline.dto.RawOpportunityResponse;
-import io.github.lucasfcz.coralink.modules.admin.AdminDashboardService;
 import io.github.lucasfcz.coralink.modules.opportunity.OpportunityService;
 import io.github.lucasfcz.coralink.modules.pipeline.PipelineService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -103,6 +101,16 @@ public class AdminController {
     }
 
     @Operation(
+            summary = "Oportunidades Brutas com Falha na Extração",
+            description = "Lista todas as matérias brutas triadas positivamente que atingiram o limite de tentativas de extração pela IA sem sucesso."
+    )
+    @ApiResponse(responseCode = "200", description = "Página de oportunidades que falharam na extração retornada com sucesso")
+    @GetMapping("/pipeline/failed-extractions")
+    public ResponseEntity<Page<RawOpportunityResponse>> getFailedExtractions(Pageable pageable) {
+        return ResponseEntity.ok(adminDashboardService.getFailedExtractions(pageable));
+    }
+
+    @Operation(
             summary = "Atualização Administrativa de Oportunidade",
             description = "Permite corrigir títulos, prazos, resumos ou filtros de uma oportunidade após a extração por IA. Invalida o cache Redis automaticamente."
     )
@@ -118,17 +126,17 @@ public class AdminController {
     }
 
     @Operation(
-            summary = "Exclusão Administrativa de Oportunidade",
-            description = "Exclui definitivamente uma oportunidade inadequada. Invalida o cache Redis correspondente."
+            summary = "Soft Delete de Oportunidade (ADMIN)",
+            description = "Marca a oportunidade como expirada definindo sua data de validade no passado, ocultando-a do feed público sem remover o registro do banco. Invalida o cache Redis correspondente."
     )
-    @ApiResponse(responseCode = "204", description = "Oportunidade excluída com sucesso")
+    @ApiResponse(responseCode = "204", description = "Oportunidade expirada com sucesso")
     @ApiResponse(responseCode = "404", description = "Oportunidade não encontrada")
     @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/opportunities/{id}")
-    public ResponseEntity<Void> deleteOpportunity(
-            @Parameter(description = "Identificador da oportunidade a ser excluída") @PathVariable Long id
+    public ResponseEntity<Void> softDeleteOpportunity(
+            @Parameter(description = "Identificador da oportunidade a ser ocultada/expirada") @PathVariable Long id
     ) {
-        opportunityService.deleteOpportunity(id);
+        opportunityService.softDeleteOpportunity(id);
         return ResponseEntity.noContent().build();
     }
 

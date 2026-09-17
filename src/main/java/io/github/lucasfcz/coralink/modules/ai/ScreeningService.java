@@ -23,6 +23,9 @@ public class ScreeningService {
 
     private final AiClient aiClient;
 
+    @org.springframework.beans.factory.annotation.Value("${coralink.ai.rate-limit-delay-ms:6000}")
+    private long rateLimitDelayMs;
+
     private static final int MAX_RETRIES = 3;
 
     private static final String SYSTEM_PROMPT = """
@@ -120,12 +123,12 @@ public class ScreeningService {
     }
 
     /**
-     * Pausa preventiva de 20 segundos para não ultrapassar o limite de requisições por minuto (RPM)
-     * da cota gratuita da API do Google Gemini (15 RPM), prevenindo falhas de rate limit HTTP 429.
+     * Pausa preventiva para não ultrapassar o limite de requisições por minuto (RPM)
+     * da cota da API do Google Gemini, prevenindo falhas de rate limit HTTP 429.
      */
     private void awaitRateLimit() {
         try {
-            Thread.sleep(20000);
+            Thread.sleep(rateLimitDelayMs);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new AiCallException("Thread interrompida durante espera entre requisições em lote à IA", e);

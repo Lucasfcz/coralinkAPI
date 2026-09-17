@@ -24,6 +24,7 @@ public class AdminDashboardService {
     private final OpportunityRepository opportunityRepository;
     private final RawOpportunityRepository rawOpportunityRepository;
     private final UserHelpRepository userHelpRepository;
+    private final io.github.lucasfcz.coralink.modules.pipeline.RawOpportunityMapper rawOpportunityMapper;
 
     @Transactional(readOnly = true)
     public DashboardMetricsResponse getDashboardMetrics() {
@@ -39,6 +40,7 @@ public class AdminDashboardService {
         Map<String, Long> byType = mapGroupedCount(opportunityRepository.countActiveGroupedByType());
         Map<String, Long> bySource = mapGroupedCount(opportunityRepository.countActiveGroupedBySource());
         long pendingSuggestions = userHelpRepository.count();
+        long failedExtractions = rawOpportunityRepository.countByScreenedRelevantIsTrueAndBecameOpportunityIsFalseAndExtractionAttemptsGreaterThanEqual(3);
 
         return new DashboardMetricsResponse(
                 totalActive,
@@ -48,8 +50,15 @@ public class AdminDashboardService {
                 acceptanceRate,
                 byType,
                 bySource,
-                pendingSuggestions
+                pendingSuggestions,
+                failedExtractions
         );
+    }
+
+    @Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<io.github.lucasfcz.coralink.modules.pipeline.dto.RawOpportunityResponse> getFailedExtractions(org.springframework.data.domain.Pageable pageable) {
+        return rawOpportunityRepository.findByScreenedRelevantIsTrueAndBecameOpportunityIsFalseAndExtractionAttemptsGreaterThanEqualOrderByFoundAtDesc(3, pageable)
+                .map(rawOpportunityMapper::toResponse);
     }
 
     private double calculateAcceptanceRate(long screenedRelevant, long screenedIrrelevant) {

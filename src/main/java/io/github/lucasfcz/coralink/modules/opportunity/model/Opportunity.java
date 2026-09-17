@@ -42,6 +42,7 @@ public class Opportunity {
 
     @ElementCollection(fetch = FetchType.LAZY)
     @CollectionTable(name = "opportunity_target_audiences", joinColumns = @JoinColumn(name = "opportunity_id"))
+    @org.hibernate.annotations.BatchSize(size = 25)
     @Enumerated(EnumType.STRING)
     @Column(name = "target_audience")
     private Set<TargetCourseAudience> targetCourseAudiences = new HashSet<>();
@@ -165,5 +166,9 @@ public class Opportunity {
         if (expiresAt != null) {
             this.expiresAt = expiresAt;
         }
+    }
+
+    public void makeOpportunityExpirates() {
+        this.expiresAt = LocalDate.now().minusDays(1);
     }
 }

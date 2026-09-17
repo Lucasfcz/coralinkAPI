@@ -36,4 +36,10 @@ public class PipelinePersistenceService {
         raw.markAsOpportunity();
         rawOpportunityRepository.save(raw);
     }
+
+    @Transactional
+    public void recordExtractionFailure(RawOpportunity raw, String errorMessage) {
+        raw.recordExtractionFailure(errorMessage);
+        rawOpportunityRepository.save(raw);
+    }
 }

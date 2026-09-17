@@ -29,8 +29,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
@@ -248,7 +250,7 @@ public class PipelineService {
     }
 
     private PhaseResult runExtractionPhase() {
-        List<RawOpportunity> pending = rawOpportunityRepository.findByScreenedRelevantIsTrueAndBecameOpportunityIsFalse();
+        List<RawOpportunity> pending = rawOpportunityRepository.findByScreenedRelevantIsTrueAndBecameOpportunityIsFalseAndExtractionAttemptsLessThan(3);
         if (pending.isEmpty()) return PhaseResult.empty();
 
         Map<Long, DetailedContent> contents = collectDetailsFromPipeline(pending);
@@ -261,6 +263,7 @@ public class PipelineService {
             ExtractionBatchResult response = extractionService.extract(ready, contents);
             Map<Long, RawOpportunity> byId = indexById(ready);
 
+            Set<Long> succeededIds = new HashSet<>();
             int successes = 0;
             int failures = collectFailures;
             for (ExtractionResult result : response.extractionResults()) {
@@ -268,16 +271,28 @@ public class PipelineService {
                     RawOpportunity raw = byId.get(result.rawOpportunityId());
                     Collector collector = resolveCollector(raw.getSourceName());
                     persistenceService.saveOpportunity(raw, result, collector.fallbackImageUrl());
+                    succeededIds.add(result.rawOpportunityId());
                     successes++;
                 } catch (RuntimeException exception) {
                     failures++;
                     log.error("Failed to persist extracted opportunity {}", result.rawOpportunityId(), exception);
+                    persistenceService.recordExtractionFailure(byId.get(result.rawOpportunityId()), "Erro de persistência: " + exception.getMessage());
                 }
             }
+
+            for (RawOpportunity raw : ready) {
+                if (!succeededIds.contains(raw.getId())) {
+                    persistenceService.recordExtractionFailure(raw, "IA não retornou dados estruturados válidos após tentativas");
+                }
+            }
+
             return new PhaseResult(successes, failures);
 
         } catch (RuntimeException exception) {
             log.error("Extraction batch failed", exception);
+            for (RawOpportunity raw : ready) {
+                persistenceService.recordExtractionFailure(raw, "Falha crítica na chamada de IA: " + exception.getMessage());
+            }
             return new PhaseResult(0, collectFailures + ready.size());
         }
     }
@@ -290,9 +305,12 @@ public class PipelineService {
                 DetailedContent detail = collector.detailedCollect(raw.getNewsUrl());
                 if (detail != null && detail.fullContent() != null && !detail.fullContent().isBlank()) {
                     contents.put(raw.getId(), detail);
+                } else {
+                    persistenceService.recordExtractionFailure(raw, "Conteúdo detalhado ausente ou inacessível no portal de origem");
                 }
             } catch (RuntimeException exception) {
                 log.error("Failed to collect detail for raw opportunity {}", raw.getId(), exception);
+                persistenceService.recordExtractionFailure(raw, "Erro ao acessar página de detalhes: " + exception.getMessage());
             }
         }
         return contents;

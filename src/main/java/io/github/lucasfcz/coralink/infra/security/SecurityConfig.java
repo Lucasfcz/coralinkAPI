@@ -25,9 +25,12 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Configuração central da cadeia de segurança (SecurityFilterChain) do Spring Security.
@@ -49,8 +52,11 @@ public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    @Value("${coralink.cors.allowed-origins:http://localhost:3000,http://127.0.0.1:3000,https://coralink.vercel.app}")
+    @Value("${coralink.cors.allowed-origins:}")
     private String allowedOrigins;
+
+    @Value("${coralink.cors.frontend-url:}")
+    private String frontendUrl;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -106,14 +112,17 @@ public class SecurityConfig {
                         .accessDeniedHandler(accessDeniedHandler())
                 )
                 .authorizeHttpRequests(auth -> auth
+                        // 0. Tratamento interno de erros do Servlet/Spring MVC
+                        .requestMatchers("/error").permitAll()
+
                         // 1. Endpoints de autenticação pública (Login Google, Registro Local, Login Local, Refresh, Logout)
                         .requestMatchers("/auth/**").permitAll()
 
                         // 2. Consulta pública a oportunidades (feed e buscas para estudantes sem autenticação)
-                        .requestMatchers(HttpMethod.GET, "/opportunities/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/opportunities", "/opportunities/**").permitAll()
 
-                        // 3. Envio público de sugestões/ajuda por estudantes
-                        .requestMatchers(HttpMethod.POST, "/suggestion/create").permitAll()
+                        // 3. Envio de sugestões/ajuda por estudantes (exige usuário autenticado)
+                        .requestMatchers(HttpMethod.POST, "/suggestion/create").authenticated()
 
                         // 4. Documentação interativa Swagger/OpenAPI
                         .requestMatchers(
@@ -140,11 +149,31 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        List<String> origins = Arrays.stream(allowedOrigins.split(","))
-                .map(String::trim)
-                .filter(s -> !s.isEmpty())
-                .toList();
-        configuration.setAllowedOriginPatterns(origins);
+
+        Set<String> origins = new LinkedHashSet<>(List.of(
+                "http://localhost:3000",
+                "http://127.0.0.1:3000",
+                "http://localhost:3001",
+                "http://127.0.0.1:3001",
+                "http://localhost:3002",
+                "http://127.0.0.1:3002"
+        ));
+
+        if (allowedOrigins != null && !allowedOrigins.isBlank()) {
+            Arrays.stream(allowedOrigins.split(","))
+                    .map(String::trim)
+                    .filter(s -> !s.isEmpty())
+                    .forEach(origins::add);
+        }
+
+        if (frontendUrl != null && !frontendUrl.isBlank()) {
+            String cleanFrontend = frontendUrl.trim().replaceAll("/+$", "");
+            if (!cleanFrontend.isEmpty()) {
+                origins.add(cleanFrontend);
+            }
+        }
+
+        configuration.setAllowedOriginPatterns(new ArrayList<>(origins));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept", "Origin", "X-Requested-With"));
         configuration.setExposedHeaders(List.of("Authorization", "Set-Cookie"));

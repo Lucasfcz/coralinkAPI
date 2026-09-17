@@ -2,7 +2,10 @@ package io.github.lucasfcz.coralink.infra.config;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.Cache;
+import org.springframework.cache.annotation.CachingConfigurer;
 import org.springframework.cache.annotation.EnableCaching;
+import org.springframework.cache.interceptor.CacheErrorHandler;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.cache.RedisCacheConfiguration;
@@ -26,7 +29,7 @@ import java.util.Map;
 @Configuration
 @EnableCaching
 @Slf4j
-public class RedisCacheConfig {
+public class RedisCacheConfig implements CachingConfigurer {
 
     public static final String OPPORTUNITIES_CACHE = "opportunities";
     public static final String OPPORTUNITIES_COUNT_CACHE = "opportunities_count";
@@ -138,6 +141,35 @@ public class RedisCacheConfig {
                 .cacheDefaults(defaultConfig)
                 .withInitialCacheConfigurations(cacheConfigurations)
                 .build();
+    }
+
+    @Override
+    public CacheErrorHandler errorHandler() {
+        return new CacheErrorHandler() {
+            @Override
+            public void handleCacheGetError(RuntimeException exception, Cache cache, Object key) {
+                log.warn("Falha ao recuperar chave '{}' do cache '{}'. Prosseguindo com consulta no banco: {}",
+                        key, cache.getName(), exception.getMessage());
+            }
+
+            @Override
+            public void handleCachePutError(RuntimeException exception, Cache cache, Object key, Object value) {
+                log.warn("Falha ao persistir chave '{}' no cache '{}': {}",
+                        key, cache.getName(), exception.getMessage());
+            }
+
+            @Override
+            public void handleCacheEvictError(RuntimeException exception, Cache cache, Object key) {
+                log.warn("Falha ao invalidar chave '{}' do cache '{}': {}",
+                        key, cache.getName(), exception.getMessage());
+            }
+
+            @Override
+            public void handleCacheClearError(RuntimeException exception, Cache cache) {
+                log.warn("Falha ao limpar cache '{}': {}",
+                        cache.getName(), exception.getMessage());
+            }
+        };
     }
 
     public static RedisSerializer<Object> createJsonSerializer() {
