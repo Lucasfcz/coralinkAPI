@@ -13,7 +13,7 @@
 [![Flyway](https://img.shields.io/badge/Flyway-Database%20Migrations-CC0200?style=for-the-badge&logo=flyway&logoColor=white)](https://flywaydb.org/)
 
 <p align="center">
-  <strong>Ecossistema inteligente de agregação, filtragem com IA e distribuição de oportunidades acadêmicas e profissionais para universitários e estudantes.</strong>
+  <strong>Aplicação inteligente de coleta, filtragem com IA e distribuição de oportunidades acadêmicas e profissionais para universitários e estudantes.</strong>
 </p>
 
 </div>
@@ -36,7 +36,7 @@
 
 ## 1. Visão Geral
 
-O **Coralink API** é um serviço back-end construído em **Java 21** e **Spring Boot**, concebido para resolver a fragmentação de oportunidades acadêmicas, editais, estágios, bolsas de pesquisa, cursos e eventos de tecnologia na Região Metropolitana do Recife (RMR) e polos educacionais.
+O **Coralink API** é um serviço back-end construído em **Java 21** e **Spring Boot**, com o objetivo de resolver a fragmentação de oportunidades acadêmicas, editais, estágios, bolsas de pesquisa, cursos e eventos de tecnologia na Região Metropolitana do Recife (RMR) e polos educacionais.
 
 O sistema:
 1. **Monitora continuamente portais e centros de referência** (CIn-UFPE, UFPE, IFPE, UPE, Porto Digital, CESAR School, UNIBRA, UNIFAFIRE, Facepe, Senac-PE, Sympla).
@@ -214,10 +214,13 @@ A documentação interativa completa (OpenAPI 3.0 / Swagger UI) está disponíve
 
 > [!TIP]
 > **Arquitetura 100% Desacoplada:**  
-> O Coralink adota o Princípio Aberto/Fechado (OCP). Adicionar uma nova universidade, centro de pesquisa ou portal de vagas **não exige alterar nenhuma classe existente do sistema** nem modificar o banco de dados.
+> O Coralink adota o Princípio Aberto/Fechado (OCP). Adicionar uma nova fonte **não exige alterar nenhuma classe existente do sistema**.
 
-### Passo 1: Crie o Coletor
-Crie uma nova classe no pacote `io.github.lucasfcz.coralink.modules.sources` implementando a interface `Collector` (ou estendendo `WordPressCollector` / `HtmlCollector`):
+### Passo 1: Leia o pacote collector em `io.github.lucasfcz.coralink.modules.sources.collector`
+Entenda como funciona as classes abstratas e como podem ser adpatadas para criar uma nova fonte.
+
+### Passo 2: Crie o Coletor
+Crie uma nova classe no pacote `io.github.lucasfcz.coralink.modules.sources` implementando a interface `WordPressCollector` / `HtmlCollector` (você precisará identificar se a sua fonte possui Wordpress primeiro caso não tenha use o HtmlCollector):
 
 ```java
 package io.github.lucasfcz.coralink.modules.sources;
@@ -236,7 +239,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Component
-public class MinhaInstituicaoCollector implements Collector {
+public class MinhaInstituicaoCollector implements HtmlCollector {
 
     private static final String BASE_URL = "https://minhainstituicao.edu.br/noticias";
     private static final String FALLBACK_IMAGE = "https://minhainstituicao.edu.br/logo.png";
@@ -246,6 +249,7 @@ public class MinhaInstituicaoCollector implements Collector {
         return "MINHA_INSTITUICAO"; // Identificador único em String
     }
 
+       // Adapte o codigo para coletar a fonte em questão caso nescessário
     @Override
     public List<NewsSummary> collect() {
         List<NewsSummary> list = new ArrayList<>();
@@ -264,6 +268,8 @@ public class MinhaInstituicaoCollector implements Collector {
         return list;
     }
 
+        // Este método é referente a página dedicada da oportunidade
+        //  onde também pode ser preciso fazer adaptações
     @Override
     public DetailedContent detailedCollect(String newsUrl) {
         try {
