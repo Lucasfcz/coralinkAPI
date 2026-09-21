@@ -53,7 +53,7 @@ public class ExtractionService {
           - Vá direto ao ponto com linguagem objetiva, profissional e rica em dados concretos.
 
         ## Regras para Enums de OpportunityType
-        Classifique o campo 'type' estritamente em um dos seguintes 12 valores:
+        Classifique o campo 'type' estritamente em um dos seguintes 15 valores:
         - EVENT: palestras, conferências, congressos, simpósios, meetups, feiras de carreira e encontros de networking.
         - WORKSHOP: oficinas práticas mão na massa, minicursos técnicos aplicados e treinamentos intensivos.
         - COURSE: cursos livres, bootcamps de programação, certificações técnicas e cursos de capacitação extracurricular.
@@ -64,7 +64,10 @@ public class ExtractionService {
         - SCHOLARSHIP: bolsas de estudo, auxílios financeiros de permanência e editais de assistência estudantil.
         - RESEARCH: oportunidades de iniciação científica (PIBIC/PIBITI), atuação em laboratórios de pesquisa e monitoria acadêmica.
         - EXCHANGE_PROGRAM: programas de intercâmbio e mobilidade acadêmica nacional ou internacional.
-        - VOLUNTEERING: projetos comunitários, voluntariado universitário e iniciativas de extensão social com chamada aberta.
+        - VOLUNTEERING: projetos comunitários, voluntariado universitário e iniciativas sociais com chamada aberta.
+        - EXTENSION_PROGRAM: programas e projetos de extensão universitária, ligas acadêmicas e grupos de estudo curriculares/extracurriculares.
+        - INNOVATION: programas de inovação aberta, ideação, desafios tecnológicos, aceleração, pré-incubação e editais de fomento a startups/spin-offs acadêmicas (ex: Centelha, Tecnova, programas do Porto Digital e FACEPE).
+        - NOTICE: comunicados oficiais, avisos regulatórios, calendários acadêmicos e informes institucionais de relevância estudantil.
         - OTHER: qualquer outra oportunidade de participação ativa que não se enquadre nas categorias acima.
 
         NUNCA invente novos enums de OpportunityType. Se nenhum se encaixar perfeitamente, use OTHER.

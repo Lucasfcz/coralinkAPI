@@ -92,4 +92,36 @@ public class OpportunitySpecifications {
                 ? null
                 : cb.equal(cb.upper(root.get("sourceName")), sourceName.trim().toUpperCase());
     }
+
+    /**
+     * Ordenação hierárquica inteligente para o feed público:
+     * 1. Prioriza oportunidades com prazo de inscrição ativo (da mais próxima de encerrar para a mais distante);
+     * 2. Em seguida, oportunidades com data de início próxima (eventos/atividades acontecendo em breve);
+     * 3. Por fim, informativos/notícias sem data definida (ordenados por criação/id decrescente).
+     */
+    public static Specification<Opportunity> defaultSmartUrgencyOrder() {
+        return (root, query, cb) -> {
+            if (query != null && !Long.class.equals(query.getResultType()) && !long.class.equals(query.getResultType())) {
+                LocalDate today = LocalDate.now();
+
+                var urgencyGroup = cb.<Integer>selectCase()
+                        .when(cb.greaterThanOrEqualTo(root.get("registrationDeadline"), today), 1)
+                        .when(cb.greaterThanOrEqualTo(root.get("startDate"), today), 2)
+                        .when(cb.greaterThanOrEqualTo(root.get("endDate"), today), 3)
+                        .otherwise(4);
+
+                var activeDate = cb.<LocalDate>selectCase()
+                        .when(cb.greaterThanOrEqualTo(root.get("registrationDeadline"), today), root.get("registrationDeadline"))
+                        .when(cb.greaterThanOrEqualTo(root.get("startDate"), today), root.get("startDate"))
+                        .otherwise(cb.nullLiteral(LocalDate.class));
+
+                query.orderBy(
+                        cb.asc(urgencyGroup),
+                        cb.asc(activeDate),
+                        cb.desc(root.get("id"))
+                );
+            }
+            return null;
+        };
+    }
 }

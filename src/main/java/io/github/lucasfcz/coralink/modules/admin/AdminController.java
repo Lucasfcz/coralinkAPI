@@ -1,6 +1,7 @@
 package io.github.lucasfcz.coralink.modules.admin;
 
 import io.github.lucasfcz.coralink.infra.config.OpenApiConfig;
+import io.github.lucasfcz.coralink.modules.admin.dto.AdminOpportunityTypeUpdateRequest;
 import io.github.lucasfcz.coralink.modules.admin.dto.AdminOpportunityUpdateRequest;
 import io.github.lucasfcz.coralink.modules.admin.dto.DashboardMetricsResponse;
 import io.github.lucasfcz.coralink.modules.opportunity.dto.OpportunityResponse;
@@ -123,6 +124,21 @@ public class AdminController {
             @Valid @RequestBody AdminOpportunityUpdateRequest request
     ) {
         return ResponseEntity.ok(opportunityService.updateOpportunity(id, request));
+    }
+
+    @Operation(
+            summary = "Atualização Rápida de Tipo de Oportunidade (ADMIN)",
+            description = "Permite alterar diretamente a categoria/tipo de uma oportunidade pelo painel. Invalida o cache Redis automaticamente."
+    )
+    @ApiResponse(responseCode = "200", description = "Tipo da oportunidade atualizado com sucesso")
+    @ApiResponse(responseCode = "404", description = "Oportunidade não encontrada")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PatchMapping("/opportunities/{id}/type")
+    public ResponseEntity<OpportunityResponse> updateOpportunityType(
+            @Parameter(description = "Identificador da oportunidade") @PathVariable Long id,
+            @Valid @RequestBody AdminOpportunityTypeUpdateRequest request
+    ) {
+        return ResponseEntity.ok(opportunityService.updateOpportunityType(id, request.type()));
     }
 
     @Operation(

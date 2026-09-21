@@ -168,6 +168,12 @@ public class Opportunity {
         }
     }
 
+    public void updateType(OpportunityType type) {
+        if (type != null) {
+            this.type = type;
+        }
+    }
+
     public void makeOpportunityExpirates() {
         this.expiresAt = LocalDate.now().minusDays(1);
     }

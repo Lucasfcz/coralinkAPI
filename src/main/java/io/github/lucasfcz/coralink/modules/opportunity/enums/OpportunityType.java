@@ -27,6 +27,13 @@ public enum OpportunityType {
     // Mobilidade e Extensão
     EXCHANGE_PROGRAM,
     VOLUNTEERING,
+    EXTENSION_PROGRAM,
+
+    // Inovação e Empreendedorismo
+    INNOVATION,
+
+    // Comunicados e Avisos Oficiais
+    NOTICE,
 
     // Outros
     OTHER;

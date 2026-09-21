@@ -50,6 +50,9 @@ public class OpportunityService {
             Pageable pageable) {
 
         var spec = OpportunitySpecifications.filters(title, type, targetCourseAudiences, modality, sourceName, isFree, isForAll);
+        if (pageable != null && pageable.getSort().isUnsorted()) {
+            spec = spec.and(OpportunitySpecifications.defaultSmartUrgencyOrder());
+        }
 
         return opportunityRepository.findAll(spec, pageable).map(opportunityMapper::toResponse);
     }
@@ -64,6 +67,20 @@ public class OpportunityService {
     @Cacheable(value = "opportunities_count")
     public int howManyOpportunitiesAreUpcoming() {
         return opportunityRepository.countActiveOpportunities();
+    }
+
+    /**
+     * Atualização rápida de tipo de oportunidade pelo painel administrativo.
+     * Invalida todo o cache Redis de oportunidades imediatamente.
+     */
+    @CacheEvict(value = {"opportunities", "opportunity_detail", "opportunities_count"}, allEntries = true)
+    @Transactional
+    public OpportunityResponse updateOpportunityType(Long id, OpportunityType type) {
+        Opportunity opportunity = opportunityRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Oportunidade não encontrada com o id: " + id));
+        opportunity.updateType(type);
+        Opportunity updated = opportunityRepository.save(opportunity);
+        return opportunityMapper.toResponse(updated);
     }
 
     /**
