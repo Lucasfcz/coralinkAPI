@@ -166,4 +166,21 @@ class OpportunityServiceTest {
         assertEquals(42, count);
         verify(opportunityRepository).countActiveOpportunities();
     }
+
+    @Test
+    @DisplayName("Should update opportunity type successfully")
+    void shouldUpdateOpportunityTypeSuccessfully() {
+        Opportunity opportunity = buildSampleOpportunity();
+        when(opportunityRepository.findById(1L)).thenReturn(Optional.of(opportunity));
+        when(opportunityRepository.save(opportunity)).thenReturn(opportunity);
+        when(opportunityMapper.toResponse(opportunity)).thenReturn(mock(OpportunityResponse.class));
+
+        OpportunityResponse response = opportunityService.updateOpportunityType(1L, OpportunityType.INNOVATION);
+
+        assertNotNull(response);
+        assertEquals(OpportunityType.INNOVATION, opportunity.getType());
+        verify(opportunityRepository).findById(1L);
+        verify(opportunityRepository).save(opportunity);
+        verify(opportunityMapper).toResponse(opportunity);
+    }
 }

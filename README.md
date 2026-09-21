@@ -219,7 +219,15 @@ A documentação interativa completa (OpenAPI 3.0 / Swagger UI) está disponíve
 ### Passo 1: Leia o pacote collector em `io.github.lucasfcz.coralink.modules.sources.collector`
 Entenda como funciona as classes abstratas e como podem ser adpatadas para criar uma nova fonte.
 
-### Passo 2: Crie o Coletor
+### Passo 2: Crie sua Branch a partir de `development`
+Antes de codificar, sincronize com a branch `development` e crie uma branch isolada para sua contribuição:
+```bash
+git checkout development
+git pull origin development
+git checkout -b feature/fonte-minha-instituicao
+```
+
+### Passo 3: Crie o Coletor
 Crie uma nova classe no pacote `io.github.lucasfcz.coralink.modules.sources` implementando a interface `WordPressCollector` / `HtmlCollector` (você precisará identificar se a sua fonte possui Wordpress primeiro caso não tenha use o HtmlCollector):
 
 ```java
@@ -289,7 +297,7 @@ public class MinhaInstituicaoCollector implements HtmlCollector {
 }
 ```
 
-### Passo 2: Crie o Teste Unitário do seu Coletor
+### Passo 4: Crie o Teste Unitário do seu Coletor
 Crie o teste em `src/test/java/io/github/lucasfcz/coralink/modules/sources/MinhaInstituicaoCollectorTest.java`:
 
 ```java
@@ -314,19 +322,17 @@ class MinhaInstituicaoCollectorTest {
 }
 ```
 
-### Passo 3: Valide Localmente
+### Passo 5: Valide Localmente
 Execute o comando Maven para garantir que seu coletor e a suíte completa passem com sucesso:
 ```bash
 ./mvnw test -Dtest=MinhaInstituicaoCollectorTest
 ./mvnw test
 ```
 
-### Passo 4: Abra o Pull Request
-1. Faça o fork do repositório.
-2. Crie uma branch para sua fonte: `git checkout -b feature/fonte-minha-instituicao`.
-3. Faça commit e push das alterações.
-4. Abra um **Pull Request** apontando para a branch `codex/development`.
-5. Nossa equipe técnica avaliará o coletor, validará a estabilidade da URL e aprovará a integração!
+### Passo 6: Abra o Pull Request
+1. Faça o commit e push da sua branch: `git push origin feature/fonte-minha-instituicao`.
+2. Abra um **Pull Request** apontando para a branch `development`, explicando a implementação e citando o portal integrado.
+3. Nossa equipe técnica avaliará o coletor, validará a estabilidade da URL e aprovará a integração!
 
 ---
 

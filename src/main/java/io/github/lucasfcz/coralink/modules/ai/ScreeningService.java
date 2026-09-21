@@ -49,23 +49,24 @@ public class ScreeningService {
 
         Critério fundamental: o estudante tem uma ação concreta de participação ou inscrição disponível (Call-to-Action).
 
-        ## O que NÃO É RELEVANTE (isRelevant = false) — REJEIÇÃO ESTRITA
+        ## O que NÃO É RELEVANTE (isRelevant = false) — REJEIÇÃO ESTRITA E VETO SUMÁRIO
         Rejeite categoricamente conteúdos puramente informativos, jornalísticos ou administrativos que não oferecem inscrição/participação ativa:
-        1. Comunicados administrativos e rotina: avisos de calendário acadêmico geral, datas de matrícula ou rematrícula regular da faculdade, horários de aulas, funcionamento do Restaurante Universitário (RU), bibliotecas, mudanças de salas, greves, paralisações.
-        2. Notícias institucionais e burocráticas: notas de falecimento/pesar, eleições de reitoria/colegiado/sindicato, reformas ou inauguração de prédios/espaços, balanços de gestão, portarias, novas diretrizes institucionais.
-        3. Notícias acadêmicas e artigos informativos: artigos de opinião, reportagens sobre pesquisas já concluídas, coberturas de acontecimentos passados, entrevistas de professores, notícias institucionais em geral.
-        4. Resultados de editais e divulgações fechadas: listas de aprovados, homologação de resultados finais, convocações de editais cujas inscrições já encerraram.
-        5. Vitrine e homenagens a terceiros: notícias comemorativas como "Aluno da instituição ganha prêmio", "Faculdade celebra aniversário", "Professor é homenageado" — são apenas vitrines, sem oportunidade para quem lê.
-        6. Notícias com prazos de inscrição manifestamente expirados.
-        7. Política, esportes gerais, entretenimento ou promoções comerciais sem foco em carreira/aprendizado universitário.
+        1. VETO SUMÁRIO DE EXPEDIENTE E FUNCIONAMENTO: qualquer conteúdo sobre horário de funcionamento, expediente de campus (remoto ou presencial), plantão, recesso de funcionários, ponto facultativo, feriados, funcionamento de Restaurante Universitário (RU), bibliotecas ou setores administrativos DEVE ser marcado como isRelevant = false, sem exceções.
+        2. Comunicados administrativos e rotina interna: avisos de rotina de matrícula curricular de alunos veteranos, dispensa ou aproveitamento de disciplinas comuns, horários de aulas, mudanças de salas de aula, greves, paralisações.
+        3. Notícias institucionais e burocráticas: notas de falecimento/pesar, eleições de reitoria/colegiado/sindicato, reformas ou inauguração de prédios/espaços, balanços de gestão, portarias, novas diretrizes institucionais.
+        4. Notícias acadêmicas e artigos informativos: artigos de opinião, reportagens sobre pesquisas já concluídas, coberturas de acontecimentos passados, entrevistas de professores, notícias institucionais em geral.
+        5. Resultados de editais e divulgações fechadas: listas de aprovados, homologação de resultados finais, convocações de editais cujas inscrições já encerraram.
+        6. Vitrine e homenagens a terceiros: notícias comemorativas como "Aluno da instituição ganha prêmio", "Faculdade celebra aniversário", "Professor é homenageado" — são apenas vitrines, sem oportunidade para quem lê.
+        7. Notícias com prazos de inscrição manifestamente expirados.
+        8. Política, esportes gerais, entretenimento ou promoções comerciais sem foco em carreira/aprendizado universitário.
 
         Nunca invente informações. Baseie a classificação estritamente no texto fornecido.
 
         ## Conteúdo curto ou só com título
         Quando a fonte fornecer apenas o título ou poucas palavras:
-        - Palavras como "inscrições abertas", "edital de bolsa", "vaga de estágio", "hackathon", "workshop", "curso", "olimpíada", "iniciação científica", "processo seletivo" são sinais fortes de relevância (isRelevant = true).
-        - Termos como "calendário", "nota de pesar", "resultado final", "comunicado", "eleição", "recesso", "posse" são sinais fortes de rejeição (isRelevant = false).
-        - Em caso de dúvida real em que o título sugira uma oportunidade mas não detalhe prazos, marque como relevante (true) para análise na fase de extração.
+        - Palavras como "inscrições abertas", "edital de bolsa", "vaga de estágio", "hackathon", "workshop", "curso", "olimpíada", "iniciação científica", "processo seletivo", "aceleração", "startups" são sinais fortes de relevância (isRelevant = true).
+        - Termos como "expediente", "remoto", "horário de funcionamento", "calendário", "nota de pesar", "resultado final", "comunicado", "eleição", "recesso", "posse", "dispensa de disciplinas" são sinais fortes de rejeição (isRelevant = false).
+        - A salvaguarda de marcar como relevante em caso de dúvida só é permitida se o título ou texto indicar explicitamente uma oportunidade externa com inscrições abertas (vagas, bolsas, editais, minicursos, hackathons). NUNCA a utilize para avisos operacionais, de funcionamento ou rotina da universidade.
 
         ## Formato de entrada e saída
         Você receberá uma lista de conteúdos, cada um identificado por um "RawOpportunityId" único.
