@@ -26,7 +26,7 @@ import java.util.List;
 @Slf4j
 public abstract class AbstractCollector implements Collector {
 
-    protected static final int TIMEOUT_MILLIS = 15000;
+    protected static final int TIMEOUT_MILLIS = 30000;
     protected static final String USER_AGENT =
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
 
@@ -52,12 +52,23 @@ public abstract class AbstractCollector implements Collector {
      * Realiza a requisição HTTP GET usando Jsoup com headers modernos de navegador e SSL resiliente.
      */
     protected Document requestDocument(String url) {
+        return requestDocument(url, TIMEOUT_MILLIS);
+    }
+
+    /**
+     * Realiza a requisição HTTP GET usando Jsoup com timeout customizado e headers completos de navegador.
+     */
+    protected Document requestDocument(String url, int timeoutMillis) {
         try {
             return Jsoup.connect(url)
                     .sslSocketFactory(RESILIENT_SSL_SOCKET_FACTORY)
-                    .timeout(TIMEOUT_MILLIS)
+                    .timeout(timeoutMillis)
                     .userAgent(USER_AGENT)
                     .referrer(baseUrl())
+                    .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8")
+                    .header("Accept-Language", "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7")
+                    .header("Connection", "keep-alive")
+                    .header("Cache-Control", "max-age=0")
                     .followRedirects(true)
                     .get();
         } catch (IOException e) {

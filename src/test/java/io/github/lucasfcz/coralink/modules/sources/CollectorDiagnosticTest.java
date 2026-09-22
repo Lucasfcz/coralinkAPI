@@ -22,10 +22,10 @@ public class CollectorDiagnosticTest {
         List<NewsSummary> summaries = collector.collect();
         assertNotNull(summaries, name + " returned null summaries list");
         if (summaries.isEmpty()) {
-            System.out.println("WARNING: " + name + " returned empty summaries list (host may be down or unreachable)");
+            System.err.printf("[DIAGNOSTIC WARNING] Coletor '%s' retornou lista vazia de oportunidades. Verifique a acessibilidade do host remoto ou instabilidades no portal.%n", name);
             return;
         }
-        System.out.println("Summaries collected count: " + summaries.size());
+        System.out.printf("[DIAGNOSTIC SUCCESS] Coletor '%s' coletou com sucesso %d oportunidades.%n", name, summaries.size());
 
         for (int i = 0; i < summaries.size(); i++) {
             NewsSummary s = summaries.get(i);
