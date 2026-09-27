@@ -132,7 +132,9 @@ public class AuthService {
             throw new BadResponseException("Refresh token expirado. Por favor, efetue login novamente.");
         }
 
-        User user = storedToken.getUser();
+        Long userId = storedToken.getUser().getId();
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BadResponseException("Usuário associado ao token não encontrado"));
         validateUserActive(user);
 
         // 1. Revoga o token atual

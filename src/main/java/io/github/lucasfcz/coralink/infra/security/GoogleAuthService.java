@@ -7,6 +7,7 @@ import com.google.api.client.json.gson.GsonFactory;
 import io.github.lucasfcz.coralink.infra.exception.BadResponseException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -26,7 +27,7 @@ import java.util.Collections;
 public class GoogleAuthService {
 
     private final JwtProperties jwtProperties;
-    private final org.springframework.core.env.Environment environment;
+    private final Environment environment;
 
     public record GoogleUserInfo(
             String email,

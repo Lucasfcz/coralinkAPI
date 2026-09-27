@@ -197,6 +197,7 @@ class AuthServiceTest {
         storedToken.setId(100L);
 
         when(refreshTokenRepository.findByTokenHash(tokenHash)).thenReturn(Optional.of(storedToken));
+        when(userRepository.findById(5L)).thenReturn(Optional.of(user));
 
         AuthResponse response = authService.refreshToken(rawToken);
 

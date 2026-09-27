@@ -3,24 +3,17 @@ package io.github.lucasfcz.coralink.modules.auth;
 import io.github.lucasfcz.coralink.infra.config.OpenApiConfig;
 import io.github.lucasfcz.coralink.modules.auth.dto.*;
 import io.github.lucasfcz.coralink.modules.auth.model.User;
-import io.github.lucasfcz.coralink.infra.security.JwtProperties;
-import io.github.lucasfcz.coralink.modules.auth.AuthService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.Arrays;
 
 /**
  * Controlador de Autenticação pública e gestão de sessão.
@@ -38,10 +31,8 @@ import java.util.Arrays;
 @Tag(name = "Autenticação", description = "Endpoints para registro local, login clássico, login social Google e gestão de tokens")
 public class AuthController {
 
-    public static final String REFRESH_COOKIE_NAME = "coralink_refresh_token";
-
     private final AuthService authService;
-    private final JwtProperties jwtProperties;
+    private final AuthCookieService authCookieService;
 
     @Operation(
             summary = "Cadastro Local de Usuário",
@@ -56,8 +47,8 @@ public class AuthController {
             HttpServletResponse response
     ) {
         AuthResponse authResponse = authService.register(request);
-        attachRefreshTokenCookie(httpRequest, response, authResponse.refreshToken(), jwtProperties.getRefreshTokenExpirationMs() / 1000);
-        return ResponseEntity.status(HttpStatus.CREATED).body(sanitizeForClient(httpRequest, authResponse));
+        authCookieService.attachRefreshTokenCookie(httpRequest, response, authResponse.refreshToken());
+        return ResponseEntity.status(HttpStatus.CREATED).body(authCookieService.sanitizeForClient(httpRequest, authResponse));
     }
 
     @Operation(
@@ -73,8 +64,8 @@ public class AuthController {
             HttpServletResponse response
     ) {
         AuthResponse authResponse = authService.login(request);
-        attachRefreshTokenCookie(httpRequest, response, authResponse.refreshToken(), jwtProperties.getRefreshTokenExpirationMs() / 1000);
-        return ResponseEntity.ok(sanitizeForClient(httpRequest, authResponse));
+        authCookieService.attachRefreshTokenCookie(httpRequest, response, authResponse.refreshToken());
+        return ResponseEntity.ok(authCookieService.sanitizeForClient(httpRequest, authResponse));
     }
 
     @Operation(
@@ -90,8 +81,8 @@ public class AuthController {
             HttpServletResponse response
     ) {
         AuthResponse authResponse = authService.loginWithGoogle(request.idToken());
-        attachRefreshTokenCookie(httpRequest, response, authResponse.refreshToken(), jwtProperties.getRefreshTokenExpirationMs() / 1000);
-        return ResponseEntity.ok(sanitizeForClient(httpRequest, authResponse));
+        authCookieService.attachRefreshTokenCookie(httpRequest, response, authResponse.refreshToken());
+        return ResponseEntity.ok(authCookieService.sanitizeForClient(httpRequest, authResponse));
     }
 
     @Operation(
@@ -106,10 +97,10 @@ public class AuthController {
             HttpServletRequest httpRequest,
             HttpServletResponse response
     ) {
-        String token = resolveRefreshToken(httpRequest, bodyRequest);
+        String token = authCookieService.resolveRefreshToken(httpRequest, bodyRequest);
         AuthResponse authResponse = authService.refreshToken(token);
-        attachRefreshTokenCookie(httpRequest, response, authResponse.refreshToken(), jwtProperties.getRefreshTokenExpirationMs() / 1000);
-        return ResponseEntity.ok(sanitizeForClient(httpRequest, authResponse));
+        authCookieService.attachRefreshTokenCookie(httpRequest, response, authResponse.refreshToken());
+        return ResponseEntity.ok(authCookieService.sanitizeForClient(httpRequest, authResponse));
     }
 
     @Operation(
@@ -123,9 +114,9 @@ public class AuthController {
             HttpServletRequest httpRequest,
             HttpServletResponse response
     ) {
-        String token = resolveRefreshToken(httpRequest, bodyRequest);
+        String token = authCookieService.resolveRefreshToken(httpRequest, bodyRequest);
         authService.logout(token);
-        clearRefreshTokenCookie(httpRequest, response);
+        authCookieService.clearRefreshTokenCookie(httpRequest, response);
         return ResponseEntity.noContent().build();
     }
 
@@ -147,57 +138,5 @@ public class AuthController {
                 user.getRole()
         );
         return ResponseEntity.ok(response);
-    }
-
-    private AuthResponse sanitizeForClient(HttpServletRequest httpRequest, AuthResponse authResponse) {
-        boolean isMobile = "mobile".equalsIgnoreCase(httpRequest.getHeader("X-Client-Type"));
-        return isMobile ? authResponse : AuthResponse.of(authResponse.accessToken(), authResponse.expiresIn(), null, authResponse.user());
-    }
-
-    private String resolveRefreshToken(HttpServletRequest request, RefreshTokenRequest bodyRequest) {
-        if (request.getCookies() != null) {
-            String cookieToken = Arrays.stream(request.getCookies())
-                    .filter(c -> REFRESH_COOKIE_NAME.equals(c.getName()))
-                    .map(Cookie::getValue)
-                    .findFirst()
-                    .orElse(null);
-            if (cookieToken != null && !cookieToken.isBlank()) {
-                return cookieToken;
-            }
-        }
-
-        if (bodyRequest != null && bodyRequest.refreshToken() != null && !bodyRequest.refreshToken().isBlank()) {
-            return bodyRequest.refreshToken();
-        }
-
-        return null;
-    }
-
-    private void attachRefreshTokenCookie(HttpServletRequest request, HttpServletResponse response, String refreshToken, long maxAgeSeconds) {
-        boolean isHttps = request.isSecure() || "https".equalsIgnoreCase(request.getHeader("X-Forwarded-Proto"));
-
-        ResponseCookie cookie = ResponseCookie.from(REFRESH_COOKIE_NAME, refreshToken)
-                .httpOnly(true)
-                .secure(isHttps)
-                .sameSite(isHttps ? "None" : "Lax")
-                .path("/auth")
-                .maxAge(maxAgeSeconds)
-                .build();
-
-        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
-    }
-
-    private void clearRefreshTokenCookie(HttpServletRequest request, HttpServletResponse response) {
-        boolean isHttps = request.isSecure() || "https".equalsIgnoreCase(request.getHeader("X-Forwarded-Proto"));
-
-        ResponseCookie cookie = ResponseCookie.from(REFRESH_COOKIE_NAME, "")
-                .httpOnly(true)
-                .secure(isHttps)
-                .sameSite(isHttps ? "None" : "Lax")
-                .path("/auth")
-                .maxAge(0)
-                .build();
-
-        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
     }
 }
