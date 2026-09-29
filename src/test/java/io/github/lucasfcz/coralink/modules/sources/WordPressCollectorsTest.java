@@ -77,4 +77,30 @@ class WordPressCollectorsTest {
         assertTrue(collector.baseUrl().contains("faculdadesenacpe.edu.br"));
         assertTrue(collector.postsEndpoint().contains("wp-json/wp/v2/posts"));
     }
+
+    @Test
+    void testFpsCollectorConfig() {
+        FpsCollector collector = new FpsCollector();
+        assertEquals("FPS", collector.sourceName());
+        assertTrue(collector.baseUrl().contains("fps.edu.br"));
+        assertTrue(collector.postsEndpoint().contains("wp-json/wp/v2/posts"));
+    }
+
+    @Test
+    void testIelCollectorConfig() {
+        IelCollector collector = new IelCollector();
+        assertEquals("IEL", collector.sourceName());
+        assertTrue(collector.baseUrl().contains("ielpe.org.br"));
+        assertTrue(collector.postsEndpoint().contains("wp-json/wp/v2/noticia"));
+        assertEquals("https://ielpe.org.br/wp-json/wp/v2/noticia?slug=minha-noticia",
+                collector.singlePostEndpoint("minha-noticia", "https://ielpe.org.br/noticias/minha-noticia"));
+    }
+
+    @Test
+    void testRecnplayCollectorConfig() {
+        RecnplayCollector collector = new RecnplayCollector();
+        assertEquals("RECNPLAY", collector.sourceName());
+        assertTrue(collector.baseUrl().contains("recnplay.pe"));
+        assertTrue(collector.postsEndpoint().contains("wp-json/wp/v2/posts"));
+    }
 }
