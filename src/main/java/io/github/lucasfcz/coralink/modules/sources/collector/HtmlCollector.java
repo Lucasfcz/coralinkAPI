@@ -46,11 +46,16 @@ public abstract class HtmlCollector extends AbstractCollector {
                 return List.of();
             }
 
-            return articles(document)
+            var stream = articles(document)
                     .stream()
                     .map(this::mapArticle)
-                    .filter(Objects::nonNull)
-                    .toList();
+                    .filter(Objects::nonNull);
+
+            if (isDevMode()) {
+                return stream.limit(1).toList();
+            }
+
+            return stream.toList();
         } catch (Exception e) {
             log.error("Falha ao coletar resumos de notícias da URL: {}", pageUrl(), e);
             return List.of();

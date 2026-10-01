@@ -52,7 +52,7 @@ public class PipelineService {
     private final PipelineRunRepository pipelineRunRepository;
     private final RawOpportunityMapper rawOpportunityMapper;
 
-    @Value("${coralink.scheduler.source-check-rate-ms:43200000}")
+    @Value("${coralink.scheduler.source-check-rate-ms:14400000}")
     private long schedulerRateMs;
 
     private final AtomicBoolean running = new AtomicBoolean(false);

@@ -31,6 +31,13 @@ public class ScrapingService {
     private final RawOpportunityRepository rawOpportunityRepository;
     private final RawOpportunityMapper rawOpportunityMapper;
 
+    @org.springframework.beans.factory.annotation.Value("${coralink.scraping.dev-mode:false}")
+    private boolean devMode = false;
+
+    public void setDevMode(boolean devMode) {
+        this.devMode = devMode;
+    }
+
     public int collectAllNewOpportunitiesAndReturnQuantityCollected() {
         log.info("Registered collectors: {}", collectors.size());
 
@@ -89,6 +96,10 @@ public class ScrapingService {
                     } catch (RuntimeException exception) {
                         log.error("Collector {} failed", collector.sourceName(), exception);
                         return List.<NewsSummary>of().stream();
+                    }
+
+                    if (devMode && collected.size() > 1) {
+                        collected = List.of(collected.get(0));
                     }
 
                     log.info(

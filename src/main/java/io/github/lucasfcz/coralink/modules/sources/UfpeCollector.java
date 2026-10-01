@@ -100,8 +100,14 @@ public class UfpeCollector extends HtmlCollector {
                             .map(article -> mapArticleWithCenter(article, center))
                             .filter(Objects::nonNull)
                             .toList();
-                    result.addAll(centerNews);
-                    log.info("Coletadas {} oportunidades do centro UFPE '{}' ({})", centerNews.size(), center.acronym(), center.path());
+                    if (!centerNews.isEmpty()) {
+                        if (isDevMode()) {
+                            log.info("[DEV] Coletada 1 oportunidade do centro UFPE '{}' ({}); encerrando varredura rápida", center.acronym(), center.path());
+                            return List.of(centerNews.get(0));
+                        }
+                        result.addAll(centerNews);
+                        log.info("Coletadas {} oportunidades do centro UFPE '{}' ({})", centerNews.size(), center.acronym(), center.path());
+                    }
                 }
             } catch (Exception exception) {
                 log.warn("Falha ao coletar oportunidades do centro UFPE '{}' ({}); ignorando", center.acronym(), center.path(), exception);

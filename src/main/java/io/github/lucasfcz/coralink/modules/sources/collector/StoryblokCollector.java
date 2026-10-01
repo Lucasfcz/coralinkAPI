@@ -40,6 +40,9 @@ public abstract class StoryblokCollector extends AbstractCollector {
             NewsSummary summary = mapStory(story);
             if (summary != null) {
                 summaries.add(summary);
+                if (isDevMode()) {
+                    break;
+                }
             }
         }
         return summaries;

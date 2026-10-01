@@ -88,4 +88,35 @@ class ScrapingServiceTest {
         assertEquals(0, count);
         verify(rawOpportunityRepository, never()).saveAll(anyList());
     }
+
+    @Test
+    @DisplayName("Should limit each collector to 1 item when devMode is enabled")
+    void shouldLimitEachCollectorToOneItemWhenDevModeIsEnabled() {
+        when(collector1.sourceName()).thenReturn("UFPE");
+
+        NewsSummary item1 = new NewsSummary(
+                "Notícia 1", "Resumo 1", "https://example.com/1", "UFPE", LocalDateTime.now()
+        );
+        NewsSummary item2 = new NewsSummary(
+                "Notícia 2", "Resumo 2", "https://example.com/2", "UFPE", LocalDateTime.now()
+        );
+        NewsSummary item3 = new NewsSummary(
+                "Notícia 3", "Resumo 3", "https://example.com/3", "UFPE", LocalDateTime.now()
+        );
+
+        when(collector1.collect()).thenReturn(List.of(item1, item2, item3));
+        when(rawOpportunityRepository.findAllByNewsUrlIn(anySet())).thenReturn(List.of());
+
+        ScrapingService scrapingService = new ScrapingService(
+                List.of(collector1),
+                rawOpportunityRepository,
+                rawOpportunityMapper
+        );
+        scrapingService.setDevMode(true);
+
+        int count = scrapingService.collectAllNewOpportunitiesAndReturnQuantityCollected();
+
+        assertEquals(1, count);
+        verify(rawOpportunityRepository, times(1)).saveAll(argThat(list -> ((List<?>) list).size() == 1));
+    }
 }

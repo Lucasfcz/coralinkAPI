@@ -110,6 +110,10 @@ public class SymplaCollector extends HtmlCollector {
                     NewsSummary summary = mapArticle(card);
                     if (summary != null) {
                         summariesByUrl.putIfAbsent(summary.url(), summary);
+                        if (isDevMode() && !summariesByUrl.isEmpty()) {
+                            log.info("[DEV] Coletada 1 oportunidade do Sympla na URL '{}'; encerrando varredura rápida", listingUrl);
+                            return new ArrayList<>(summariesByUrl.values());
+                        }
                     }
                 }
             } catch (Exception e) {

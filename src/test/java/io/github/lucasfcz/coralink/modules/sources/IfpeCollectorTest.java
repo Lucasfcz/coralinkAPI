@@ -11,4 +11,13 @@ class IfpeCollectorTest extends BaseCollectorLiveTest {
         IfpeCollector collector = new IfpeCollector();
         assertCollectorLive(collector, "IFPE");
     }
+
+    @Test
+    @DisplayName("Teste de modo dev: IFPE deve retornar no maximo 1 item")
+    void testDevModeLimit() {
+        IfpeCollector collector = new IfpeCollector();
+        collector.setDevMode(true);
+        var result = collector.collect();
+        org.junit.jupiter.api.Assertions.assertTrue(result.size() <= 1);
+    }
 }
