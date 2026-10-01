@@ -34,11 +34,23 @@ class OpportunitySpecificationsTest {
         );
         assertNotNull(spec);
 
+        Specification<Opportunity> multiSpec = OpportunitySpecifications.filters(
+                "Hackathon",
+                Set.of(OpportunityType.EVENT, OpportunityType.WORKSHOP, OpportunityType.INTERNSHIP),
+                Set.of(TargetCourseAudience.ADS, TargetCourseAudience.SOFTWARE_ENGINEERING),
+                Modality.IN_PERSON,
+                Set.of("UFPE", "UPE"),
+                true,
+                true
+        );
+        assertNotNull(multiSpec);
+
         Specification<Opportunity> nullFiltersSpec = OpportunitySpecifications.filters(
                 null,
+                (Set<OpportunityType>) null,
                 null,
                 null,
-                null,
+                (Set<String>) null,
                 null,
                 null
         );

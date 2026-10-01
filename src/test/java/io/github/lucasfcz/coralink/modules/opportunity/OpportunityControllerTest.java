@@ -30,6 +30,7 @@ import java.util.Set;
 import static org.hamcrest.Matchers.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -104,10 +105,10 @@ class OpportunityControllerTest {
 
         when(opportunityService.getRelevantOpportunities(
                 eq("Java"),
-                eq(OpportunityType.COURSE),
+                eq(Set.of(OpportunityType.COURSE)),
                 eq(Set.of(TargetCourseAudience.COMPUTER_SCIENCE)),
                 eq(Modality.ONLINE),
-                eq("UFPE"),
+                eq(Set.of("UFPE")),
                 eq(true),
                 eq(true),
                 any(Pageable.class)))
@@ -126,12 +127,46 @@ class OpportunityControllerTest {
 
         verify(opportunityService).getRelevantOpportunities(
                 eq("Java"),
-                eq(OpportunityType.COURSE),
+                eq(Set.of(OpportunityType.COURSE)),
                 eq(Set.of(TargetCourseAudience.COMPUTER_SCIENCE)),
                 eq(Modality.ONLINE),
-                eq("UFPE"),
+                eq(Set.of("UFPE")),
                 eq(true),
                 eq(true),
+                any(Pageable.class)
+        );
+    }
+
+    @Test
+    @DisplayName("GET /opportunities - Should pass multiple types and courses query params to service")
+    void shouldPassMultipleTypesAndCoursesToService() throws Exception {
+        Page<OpportunityResponse> emptyPage = new PageImpl<>(List.of(), PageRequest.of(0, 10), 0);
+
+        when(opportunityService.getRelevantOpportunities(
+                isNull(),
+                eq(Set.of(OpportunityType.INTERNSHIP, OpportunityType.WORKSHOP, OpportunityType.EVENT)),
+                eq(Set.of(TargetCourseAudience.ADS, TargetCourseAudience.SOFTWARE_ENGINEERING)),
+                isNull(),
+                isNull(),
+                isNull(),
+                isNull(),
+                any(Pageable.class)))
+                .thenReturn(emptyPage);
+
+        mockMvc.perform(get("/opportunities")
+                        .param("type", "INTERNSHIP", "WORKSHOP", "EVENT")
+                        .param("targetCourseAudience", "ADS", "SOFTWARE_ENGINEERING")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk());
+
+        verify(opportunityService).getRelevantOpportunities(
+                isNull(),
+                eq(Set.of(OpportunityType.INTERNSHIP, OpportunityType.WORKSHOP, OpportunityType.EVENT)),
+                eq(Set.of(TargetCourseAudience.ADS, TargetCourseAudience.SOFTWARE_ENGINEERING)),
+                isNull(),
+                isNull(),
+                isNull(),
+                isNull(),
                 any(Pageable.class)
         );
     }
@@ -144,11 +179,12 @@ class OpportunityControllerTest {
 
         when(opportunityService.getRelevantOpportunities(
                 eq("Hackathon"),
-                eq(null),
-                eq(null),
-                eq(null),
-                eq(null),
-                eq(null),
+                isNull(),
+                isNull(),
+                isNull(),
+                isNull(),
+                isNull(),
+                isNull(),
                 any(Pageable.class)))
                 .thenReturn(page);
 
@@ -160,11 +196,12 @@ class OpportunityControllerTest {
 
         verify(opportunityService).getRelevantOpportunities(
                 eq("Hackathon"),
-                eq(null),
-                eq(null),
-                eq(null),
-                eq(null),
-                eq(null),
+                isNull(),
+                isNull(),
+                isNull(),
+                isNull(),
+                isNull(),
+                isNull(),
                 any(Pageable.class)
         );
     }
