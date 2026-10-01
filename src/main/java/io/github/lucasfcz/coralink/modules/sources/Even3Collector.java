@@ -27,7 +27,7 @@ import java.util.*;
 public class Even3Collector extends AbstractCollector {
 
     private static final String BASE_URL = "https://www.even3.com.br";
-    private static final String FALLBACK_IMAGE_URL = "https://static.even3.com/assets/favicons/apple-icon-180x180.png";
+    private static final String FALLBACK_IMAGE_URL = "https://www.projetodraft.com/wp-content/uploads/2016/12/even3.jpg.webp";
 
     private static final String SUBMISSIONS_API_URL =
             "https://even3v2.blob.core.windows.net/json/lista-submissoes-abertas.json";

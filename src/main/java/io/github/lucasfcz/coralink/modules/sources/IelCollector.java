@@ -14,7 +14,7 @@ import org.springframework.stereotype.Component;
 public class IelCollector extends WordPressCollector {
 
     private static final String BASE_URL = "https://ielpe.org.br";
-    private static final String FALLBACK_IMAGE_URL = "https://ielpe.org.br/wp-content/themes/cartello/img/logo-iel-active.png";
+    private static final String FALLBACK_IMAGE_URL = "https://upload.wikimedia.org/wikipedia/commons/a/a6/IEL_logo_2024.png";
     private static final String POSTS_ENDPOINT = BASE_URL + "/wp-json/wp/v2/noticia?per_page=20";
 
     @Override

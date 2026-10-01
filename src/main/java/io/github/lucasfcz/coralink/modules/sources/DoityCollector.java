@@ -19,7 +19,7 @@ import java.util.*;
 public class DoityCollector extends HtmlCollector {
 
     private static final String BASE_URL = "https://doity.com.br";
-    private static final String FALLBACK_IMAGE_URL = "https://doity.com.br/_site/static/brand/icon.png";
+    private static final String FALLBACK_IMAGE_URL = "https://doity.com.br/blog/app/uploads/2021/06/logo-doity.svg";
 
     private static final List<String> LISTING_URLS = List.of(
             "https://doity.com.br/eventos/recife-pe",

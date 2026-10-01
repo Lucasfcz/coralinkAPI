@@ -13,7 +13,7 @@ import org.springframework.stereotype.Component;
 public class FpsCollector extends WordPressCollector {
 
     private static final String BASE_URL = "https://fps.edu.br";
-    private static final String FALLBACK_IMAGE_URL = "https://fps.edu.br/wp-content/themes/fps-theme/assets/images/logo-fps.svg";
+    private static final String FALLBACK_IMAGE_URL = "https://fps.edu.br/wp-content/uploads/2023/07/Ativo-1-2.png";
     private static final String POSTS_ENDPOINT = BASE_URL + "/wp-json/wp/v2/posts?per_page=20";
 
     @Override

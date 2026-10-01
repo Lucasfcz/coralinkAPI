@@ -13,7 +13,7 @@ import org.springframework.stereotype.Component;
 public class RecnplayCollector extends WordPressCollector {
 
     private static final String BASE_URL = "https://recnplay.pe";
-    private static final String FALLBACK_IMAGE_URL = "https://recnplay.pe/wp-content/themes/recnplay/assets/images/logo.png";
+    private static final String FALLBACK_IMAGE_URL = "https://pe.agenciasebrae.com.br/wp-content/uploads/sites/17/2024/11/DSC8705-scaled.jpg";
     private static final String POSTS_ENDPOINT = BASE_URL + "/wp-json/wp/v2/posts?per_page=20";
 
     @Override

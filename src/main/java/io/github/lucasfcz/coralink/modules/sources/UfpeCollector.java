@@ -74,7 +74,7 @@ public class UfpeCollector extends HtmlCollector {
 
     @Override
     protected String imageFallBackUrl() {
-        return "https://www.ufpe.br/ufpe-theme/images/custom/logo-ufpe.png";
+        return "https://redeunisustentavel.com.br/wp-content/uploads/2025/04/UFPE-510x320.png";
     }
 
     @Override

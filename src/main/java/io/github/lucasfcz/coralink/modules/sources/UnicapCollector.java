@@ -19,7 +19,7 @@ import java.util.*;
 public class UnicapCollector extends HtmlCollector {
 
     private static final String BASE_URL = "https://portal.unicap.br";
-    private static final String FALLBACK_IMAGE_URL = "https://portal.unicap.br/o/unicap-theme/images/logo-footer.png";
+    private static final String FALLBACK_IMAGE_URL = "https://images.seeklogo.com/logo-png/21/1/unicap-logo-png_seeklogo-218833.png";
 
     private static final List<String> SECTIONS = List.of(
             "/acontece-na-unicap",

@@ -11,7 +11,7 @@ import org.springframework.stereotype.Component;
 public class SenacPeCollector extends WordPressCollector {
 
     private static final String BASE_URL = "https://faculdadesenacpe.edu.br";
-    private static final String FALLBACK_IMAGE = "https://faculdadesenacpe.edu.br/wp-content/themes/senac/images/logo.png";
+    private static final String FALLBACK_IMAGE = "https://logodownload.org/wp-content/uploads/2014/10/senac-logo-0-2048x2048.png";
     private static final String POSTS_ENDPOINT = BASE_URL + "/wp-json/wp/v2/posts?per_page=20";
 
     @Override
