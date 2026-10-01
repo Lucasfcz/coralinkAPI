@@ -86,14 +86,12 @@ public class AuthCookieService {
     }
 
     /**
-     * Oculta o refresh token do corpo JSON para clientes Web (onde o cookie HttpOnly já é suficiente),
-     * mas preserva no JSON caso seja um aplicativo móvel (Header 'X-Client-Type: mobile').
+     * Retorna a resposta de autenticação.
+     * Preserva o refresh token no corpo JSON para fornecer contingência aos clientes Web e Mobile
+     * caso cookies HttpOnly sejam bloqueados ou descartados pelo navegador em ambientes locais/proxy.
      */
     public AuthResponse sanitizeForClient(HttpServletRequest httpRequest, AuthResponse authResponse) {
-        boolean isMobile = "mobile".equalsIgnoreCase(httpRequest.getHeader("X-Client-Type"));
-        return isMobile
-                ? authResponse
-                : AuthResponse.of(authResponse.accessToken(), authResponse.expiresIn(), null, authResponse.user());
+        return authResponse;
     }
 
     private boolean isHttps(HttpServletRequest request) {

@@ -1,68 +1,40 @@
 package io.github.lucasfcz.coralink.modules.sources;
 
-import io.github.lucasfcz.coralink.modules.sources.dto.DetailedContent;
-import io.github.lucasfcz.coralink.modules.sources.dto.NewsSummary;
-import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-import java.util.List;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
-import static org.junit.jupiter.api.Assertions.*;
+class PortoDigitalCollectorTest extends BaseCollectorLiveTest {
 
-class PortoDigitalCollectorTest {
+    @Test
+    @DisplayName("Teste de integração ao vivo: PORTO_DIGITAL")
+    void testLiveCollection() {
+        String token = resolveToken();
+        PortoDigitalCollector collector = new PortoDigitalCollector(token);
+        assertCollectorLive(collector, "PORTO_DIGITAL");
+    }
 
-    private PortoDigitalCollector collector;
-
-    @BeforeEach
-    void setUp() {
+    private String resolveToken() {
         String token = System.getenv("PORTO_DIGITAL_STORYBLOK_TOKEN");
-        if (token == null || token.isBlank()) {
-            token = System.getProperty("PORTO_DIGITAL_STORYBLOK_TOKEN");
+        if (token != null && !token.isBlank()) return token;
+        token = System.getProperty("PORTO_DIGITAL_STORYBLOK_TOKEN");
+        if (token != null && !token.isBlank()) return token;
+        try {
+            Path envPath = Path.of(".env");
+            if (!Files.exists(envPath)) {
+                envPath = Path.of("../.env");
+            }
+            if (Files.exists(envPath)) {
+                for (String line : Files.readAllLines(envPath)) {
+                    if (line.startsWith("PORTO_DIGITAL_STORYBLOK_TOKEN=")) {
+                        return line.substring("PORTO_DIGITAL_STORYBLOK_TOKEN=".length()).trim();
+                    }
+                }
+            }
+        } catch (Exception ignored) {
         }
-        collector = new PortoDigitalCollector(token);
-    }
-
-    @Test
-    void testCollectFetchesLiveStories() {
-        org.junit.jupiter.api.Assumptions.assumeTrue(
-                System.getenv("PORTO_DIGITAL_STORYBLOK_TOKEN") != null || System.getProperty("PORTO_DIGITAL_STORYBLOK_TOKEN") != null,
-                "PORTO_DIGITAL_STORYBLOK_TOKEN não configurado no ambiente; pulando teste de integração ao vivo."
-        );
-        List<NewsSummary> summaries = collector.collect();
-        assertNotNull(summaries);
-        assertFalse(summaries.isEmpty());
-
-        for (NewsSummary summary : summaries) {
-            assertNotNull(summary.title());
-            assertFalse(summary.title().isBlank());
-            assertNotNull(summary.url());
-            assertTrue(summary.url().startsWith("https://www.portodigital.org/noticias/"));
-            assertNotNull(summary.shortSummary());
-            assertFalse(summary.shortSummary().isBlank());
-            assertEquals("PORTO_DIGITAL", summary.sourceName());
-            assertNotNull(summary.foundAt());
-        }
-    }
-
-    @Test
-    void testDetailedCollectStoryblokEndpoint() {
-        org.junit.jupiter.api.Assumptions.assumeTrue(
-                System.getenv("PORTO_DIGITAL_STORYBLOK_TOKEN") != null || System.getProperty("PORTO_DIGITAL_STORYBLOK_TOKEN") != null,
-                "PORTO_DIGITAL_STORYBLOK_TOKEN não configurado no ambiente; pulando teste de integração ao vivo."
-        );
-        List<NewsSummary> summaries = collector.collect();
-        assertFalse(summaries.isEmpty());
-
-        NewsSummary first = summaries.get(0);
-        DetailedContent detailed = collector.detailedCollect(first.url());
-        assertNotNull(detailed);
-        assertNotNull(detailed.fullContent());
-        assertFalse(detailed.fullContent().isBlank());
-    }
-
-    @Test
-    void testDetailedCollectInvalidUrlReturnsNull() {
-        DetailedContent detailed = collector.detailedCollect("https://invalid-non-existent-domain-12345.org/noticias/non-existent-slug");
-        assertNull(detailed);
+        return null;
     }
 }
