@@ -79,8 +79,15 @@ public class OpportunitySpecifications {
             if (audiences == null || audiences.isEmpty()) {
                 return null;
             }
-            query.distinct(true);
-            return root.join("targetCourseAudiences").in(audiences);
+            Subquery<Long> subquery = query.subquery(Long.class);
+            Root<Opportunity> subRoot = subquery.from(Opportunity.class);
+            Join<Opportunity, TargetCourseAudience> join = subRoot.join("targetCourseAudiences");
+            subquery.select(subRoot.get("id"))
+                    .where(
+                            cb.equal(subRoot.get("id"), root.get("id")),
+                            join.in(audiences)
+                    );
+            return cb.exists(subquery);
         };
     }
 
