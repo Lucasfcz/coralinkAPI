@@ -4,14 +4,16 @@ import io.github.lucasfcz.coralink.modules.sources.collector.WordPressCollector;
 import org.springframework.stereotype.Component;
 
 /**
- * Coletor oficial para notícias, workshops e cursos da Faculdade Senac Pernambuco.
+ * Coletor oficial para notícias, programações, workshops e chamadas do REC'n'Play.
+ * O maior festival gratuito de tecnologia, inovação, cultura e criatividade do Brasil,
+ * sediado no Porto Digital (Recife Antigo), com forte presença universitária (Arena Universitária e Hackathons).
  * Utiliza a API REST pública nativa do WordPress (/wp-json/wp/v2/posts).
  */
 @Component
-public class SenacPeCollector extends WordPressCollector {
+public class RecnplayCollector extends WordPressCollector {
 
-    private static final String BASE_URL = "https://faculdadesenacpe.edu.br";
-    private static final String FALLBACK_IMAGE = "https://logodownload.org/wp-content/uploads/2014/10/senac-logo-0-2048x2048.png";
+    private static final String BASE_URL = "https://recnplay.pe";
+    private static final String FALLBACK_IMAGE_URL = "https://pe.agenciasebrae.com.br/wp-content/uploads/sites/17/2024/11/DSC8705-scaled.jpg";
     private static final String POSTS_ENDPOINT = BASE_URL + "/wp-json/wp/v2/posts?per_page=20";
 
     @Override
@@ -21,7 +23,7 @@ public class SenacPeCollector extends WordPressCollector {
 
     @Override
     protected String imageFallBackUrl() {
-        return FALLBACK_IMAGE;
+        return FALLBACK_IMAGE_URL;
     }
 
     @Override
@@ -31,6 +33,6 @@ public class SenacPeCollector extends WordPressCollector {
 
     @Override
     public String sourceName() {
-        return "SENAC_PE";
+        return "RECNPLAY";
     }
 }

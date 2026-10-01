@@ -27,29 +27,19 @@ public class OpportunityService {
     private final OpportunityMapper opportunityMapper;
 
     // Retorna apenas oportunidades ativas segundo a regra temporal de vigência, aplicando filtros dinâmicos via JPA Specification.
-    public Page<OpportunityResponse> getRelevantOpportunities(
-            String title,
-            OpportunityType type,
-            Set<TargetCourseAudience> targetCourseAudiences,
-            Modality modality,
-            Boolean isFree,
-            Boolean isForAll,
-            Pageable pageable) {
-        return getRelevantOpportunities(title, type, targetCourseAudiences, modality, null, isFree, isForAll, pageable);
-    }
 
-    @Cacheable(value = "opportunities", key = "{#title, #type, #targetCourseAudiences, #modality, #sourceName, #isFree, #isForAll, #pageable}")
+    @Cacheable(value = "opportunities", key = "{#title, #types, #targetCourseAudiences, #modality, #sourceNames, #isFree, #isForAll, #pageable}")
     public Page<OpportunityResponse> getRelevantOpportunities(
             String title,
-            OpportunityType type,
+            Set<OpportunityType> types,
             Set<TargetCourseAudience> targetCourseAudiences,
             Modality modality,
-            String sourceName,
+            Set<String> sourceNames,
             Boolean isFree,
             Boolean isForAll,
             Pageable pageable) {
 
-        var spec = OpportunitySpecifications.filters(title, type, targetCourseAudiences, modality, sourceName, isFree, isForAll);
+        var spec = OpportunitySpecifications.filters(title, types, targetCourseAudiences, modality, sourceNames, isFree, isForAll);
         if (pageable != null && pageable.getSort().isUnsorted()) {
             spec = spec.and(OpportunitySpecifications.defaultSmartUrgencyOrder());
         }

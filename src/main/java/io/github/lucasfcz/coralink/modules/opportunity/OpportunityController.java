@@ -36,14 +36,43 @@ public class OpportunityController {
     @GetMapping
     public ResponseEntity<Page<OpportunityResponse>> getOpportunities(
             @Parameter(description = "Termo de busca no título da oportunidade") @RequestParam(required = false) String title,
-            @Parameter(description = "Tipo/categoria da oportunidade (ex: HACKATHON, EVENT, INTERNSHIP)") @RequestParam(required = false) OpportunityType type,
-            @Parameter(description = "Cursos ou públicos-alvo recomendados") @RequestParam(required = false) Set<TargetCourseAudience> targetCourseAudience,
+            @Parameter(description = "Tipo(s)/categoria(s) da oportunidade (ex: HACKATHON, EVENT, INTERNSHIP)") @RequestParam(name = "type", required = false) Set<OpportunityType> type,
+            @Parameter(description = "Alias para múltiplos tipos") @RequestParam(name = "types", required = false) Set<OpportunityType> types,
+            @Parameter(description = "Cursos ou públicos-alvo recomendados") @RequestParam(name = "targetCourseAudience", required = false) Set<TargetCourseAudience> targetCourseAudience,
+            @Parameter(description = "Alias para públicos-alvo") @RequestParam(name = "targetCourseAudiences", required = false) Set<TargetCourseAudience> targetCourseAudiences,
+            @Parameter(description = "Alias para cursos") @RequestParam(name = "courses", required = false) Set<TargetCourseAudience> courses,
             @Parameter(description = "Modalidade de realização (IN_PERSON, ONLINE, HYBRID)") @RequestParam(required = false) Modality modality,
-            @Parameter(description = "Fonte ou instituição de origem (ex: UFPE, CESAR_SCHOOL, CIN_UFPE)") @RequestParam(required = false) String sourceName,
+            @Parameter(description = "Fonte(s) ou instituição(ões) de origem (ex: UFPE, CESAR_SCHOOL, CIN_UFPE)") @RequestParam(name = "sourceName", required = false) Set<String> sourceName,
+            @Parameter(description = "Alias para fontes") @RequestParam(name = "sourceNames", required = false) Set<String> sourceNames,
+            @Parameter(description = "Alias para instituições") @RequestParam(name = "institutions", required = false) Set<String> institutions,
             @Parameter(description = "Filtro de gratuidade (true = gratuita, false = paga)") @RequestParam(required = false) Boolean isFree,
             @Parameter(description = "Se false, significa que apenas estudantes da faculdade podem participar") @RequestParam(required = false) Boolean isForAll,
             Pageable pageable) {
-        return ResponseEntity.ok(opportunityService.getRelevantOpportunities(title, type, targetCourseAudience, modality, sourceName, isFree, isForAll, pageable));
+
+        Set<OpportunityType> resolvedTypes = new java.util.HashSet<>();
+        if (type != null) resolvedTypes.addAll(type);
+        if (types != null) resolvedTypes.addAll(types);
+
+        Set<TargetCourseAudience> resolvedAudiences = new java.util.HashSet<>();
+        if (targetCourseAudience != null) resolvedAudiences.addAll(targetCourseAudience);
+        if (targetCourseAudiences != null) resolvedAudiences.addAll(targetCourseAudiences);
+        if (courses != null) resolvedAudiences.addAll(courses);
+
+        Set<String> resolvedSources = new java.util.HashSet<>();
+        if (sourceName != null) resolvedSources.addAll(sourceName);
+        if (sourceNames != null) resolvedSources.addAll(sourceNames);
+        if (institutions != null) resolvedSources.addAll(institutions);
+
+        return ResponseEntity.ok(opportunityService.getRelevantOpportunities(
+                title,
+                resolvedTypes.isEmpty() ? null : resolvedTypes,
+                resolvedAudiences.isEmpty() ? null : resolvedAudiences,
+                modality,
+                resolvedSources.isEmpty() ? null : resolvedSources,
+                isFree,
+                isForAll,
+                pageable
+        ));
     }
 
     @Operation(
@@ -55,7 +84,7 @@ public class OpportunityController {
     public ResponseEntity<Page<OpportunityResponse>> findOpportunityByTitle(
             @Parameter(description = "Palavra-chave a buscar") @RequestParam String title,
             Pageable pageable) {
-        return ResponseEntity.ok(opportunityService.getRelevantOpportunities(title, null, null, null, null, null, pageable));
+        return ResponseEntity.ok(opportunityService.getRelevantOpportunities(title, null, null, null, null, null, null, pageable));
     }
 
     @Operation(

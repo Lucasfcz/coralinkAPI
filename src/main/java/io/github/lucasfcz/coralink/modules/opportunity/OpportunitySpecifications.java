@@ -2,7 +2,7 @@ package io.github.lucasfcz.coralink.modules.opportunity;
 
 import io.github.lucasfcz.coralink.modules.opportunity.enums.*;
 import io.github.lucasfcz.coralink.modules.opportunity.model.Opportunity;
-import jakarta.persistence.criteria.Predicate;
+import jakarta.persistence.criteria.*;
 import org.springframework.data.jpa.domain.Specification;
 
 import java.time.LocalDate;
@@ -19,7 +19,7 @@ public class OpportunitySpecifications {
             Boolean isFree,
             Boolean isForAll
     ) {
-        return filters(title, type, targetCourseAudiences, modality, null, isFree, isForAll);
+        return filters(title, type != null ? Set.of(type) : null, targetCourseAudiences, modality, (Set<String>) null, isFree, isForAll);
     }
 
     public static Specification<Opportunity> filters(
@@ -31,14 +31,26 @@ public class OpportunitySpecifications {
             Boolean isFree,
             Boolean isForAll
     ) {
+        Set<String> sources = (sourceName != null && !sourceName.isBlank()) ? Set.of(sourceName) : null;
+        return filters(title, type != null ? Set.of(type) : null, targetCourseAudiences, modality, sources, isFree, isForAll);
+    }
 
+    public static Specification<Opportunity> filters(
+            String title,
+            Set<OpportunityType> types,
+            Set<TargetCourseAudience> targetCourseAudiences,
+            Modality modality,
+            Set<String> sourceNames,
+            Boolean isFree,
+            Boolean isForAll
+    ) {
         return Specification
                 .where(isNotExpired())
                 .and(hasTitle(title))
-                .and(hasType(type))
+                .and(hasTypes(types))
                 .and(hasTargetAudiences(targetCourseAudiences))
                 .and(hasModality(modality))
-                .and(hasSourceName(sourceName))
+                .and(hasSourceNames(sourceNames))
                 .and(hasIsFree(isFree))
                 .and(hasIsForAll(isForAll));
     }
@@ -53,10 +65,13 @@ public class OpportunitySpecifications {
                 : cb.like(cb.lower(root.get("title")), "%" + title.trim().toLowerCase() + "%");
     }
 
-    private static Specification<Opportunity> hasType(OpportunityType type) {
-        return (root, query, cb) -> type == null
-                ? null
-                : cb.equal(root.get("type"), type);
+    private static Specification<Opportunity> hasTypes(Set<OpportunityType> types) {
+        return (root, query, cb) -> {
+            if (types == null || types.isEmpty()) {
+                return null;
+            }
+            return root.get("type").in(types);
+        };
     }
 
     private static Specification<Opportunity> hasTargetAudiences(Set<TargetCourseAudience> audiences) {
@@ -64,8 +79,15 @@ public class OpportunitySpecifications {
             if (audiences == null || audiences.isEmpty()) {
                 return null;
             }
-            query.distinct(true);
-            return root.join("targetCourseAudiences").in(audiences);
+            Subquery<Long> subquery = query.subquery(Long.class);
+            Root<Opportunity> subRoot = subquery.from(Opportunity.class);
+            Join<Opportunity, TargetCourseAudience> join = subRoot.join("targetCourseAudiences");
+            subquery.select(subRoot.get("id"))
+                    .where(
+                            cb.equal(subRoot.get("id"), root.get("id")),
+                            join.in(audiences)
+                    );
+            return cb.exists(subquery);
         };
     }
 
@@ -87,10 +109,19 @@ public class OpportunitySpecifications {
                 : cb.equal(root.get("isForAll"), isForAll);
     }
 
-    private static Specification<Opportunity> hasSourceName(String sourceName) {
-        return (root, query, cb) -> (sourceName == null || sourceName.isBlank())
-                ? null
-                : cb.equal(cb.upper(root.get("sourceName")), sourceName.trim().toUpperCase());
+    private static Specification<Opportunity> hasSourceNames(Set<String> sourceNames) {
+        return (root, query, cb) -> {
+            if (sourceNames == null || sourceNames.isEmpty()) {
+                return null;
+            }
+            CriteriaBuilder.In<String> inClause = cb.in(cb.upper(root.get("sourceName")));
+            for (String source : sourceNames) {
+                if (source != null && !source.isBlank()) {
+                    inClause.value(source.trim().toUpperCase());
+                }
+            }
+            return inClause;
+        };
     }
 
     /**

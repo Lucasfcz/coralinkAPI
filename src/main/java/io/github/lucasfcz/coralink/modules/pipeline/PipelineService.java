@@ -9,6 +9,7 @@ import io.github.lucasfcz.coralink.modules.ai.dto.ScreeningResult;
 import io.github.lucasfcz.coralink.modules.ai.dto.ExtractionBatchResult;
 import io.github.lucasfcz.coralink.modules.ai.dto.ExtractionResult;
 import io.github.lucasfcz.coralink.modules.pipeline.enums.PipelineStatus;
+import io.github.lucasfcz.coralink.infra.exception.AiCallException;
 import io.github.lucasfcz.coralink.infra.exception.BadResponseException;
 import io.github.lucasfcz.coralink.infra.exception.NotFoundException;
 import io.github.lucasfcz.coralink.modules.pipeline.model.PipelineRun;
@@ -52,7 +53,7 @@ public class PipelineService {
     private final PipelineRunRepository pipelineRunRepository;
     private final RawOpportunityMapper rawOpportunityMapper;
 
-    @Value("${coralink.scheduler.source-check-rate-ms:43200000}")
+    @Value("${coralink.scheduler.source-check-rate-ms:14400000}")
     private long schedulerRateMs;
 
     private final AtomicBoolean running = new AtomicBoolean(false);
@@ -243,6 +244,9 @@ public class PipelineService {
             }
             return new PhaseResult(relevant, failures);
 
+        } catch (AiCallException exception) {
+            log.error("Screening batch failed due to AI call exception", exception);
+            throw exception;
         } catch (RuntimeException exception) {
             log.error("Screening batch failed", exception);
             return new PhaseResult(0, rawOpportunities.size());
@@ -288,6 +292,9 @@ public class PipelineService {
 
             return new PhaseResult(successes, failures);
 
+        } catch (AiCallException exception) {
+            log.error("Extraction batch failed due to AI call exception", exception);
+            throw exception;
         } catch (RuntimeException exception) {
             log.error("Extraction batch failed", exception);
             for (RawOpportunity raw : ready) {

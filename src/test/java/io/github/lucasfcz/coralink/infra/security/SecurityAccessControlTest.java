@@ -2,6 +2,7 @@ package io.github.lucasfcz.coralink.infra.security;
 
 import io.github.lucasfcz.coralink.modules.admin.AdminController;
 import io.github.lucasfcz.coralink.modules.auth.AuthController;
+import io.github.lucasfcz.coralink.modules.auth.AuthCookieService;
 import io.github.lucasfcz.coralink.modules.opportunity.OpportunityController;
 import io.github.lucasfcz.coralink.modules.userhelp.UserHelpController;
 import io.github.lucasfcz.coralink.modules.opportunity.dto.OpportunityResponse;
@@ -63,6 +64,9 @@ class SecurityAccessControlTest {
 
     @MockitoBean
     private AuthService authService;
+
+    @MockitoBean
+    private AuthCookieService authCookieService;
 
     @MockitoBean
     private RateLimiterService rateLimiterService;

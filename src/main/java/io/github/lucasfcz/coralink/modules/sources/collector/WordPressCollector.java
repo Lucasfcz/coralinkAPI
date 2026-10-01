@@ -26,7 +26,8 @@ public abstract class WordPressCollector extends AbstractCollector {
     protected static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     protected String postsEndpoint() {
-        return baseUrl().replaceAll("/+$", "") + "/wp-json/wp/v2/posts?per_page=20";
+        int perPage = isDevMode() ? 1 : 20;
+        return baseUrl().replaceAll("/+$", "") + "/wp-json/wp/v2/posts?per_page=" + perPage;
     }
 
     public String singlePostEndpoint(String slug, String url) {
@@ -36,7 +37,8 @@ public abstract class WordPressCollector extends AbstractCollector {
     @Override
     public List<NewsSummary> collect() {
         try {
-            return fetchPosts(postsEndpoint());
+            List<NewsSummary> posts = fetchPosts(postsEndpoint());
+            return isDevMode() && !posts.isEmpty() ? List.of(posts.get(0)) : posts;
         } catch (CollectException e) {
             log.warn("Falha ao coletar notícias da fonte {}: {}", sourceName(), e.getMessage());
             return List.of();

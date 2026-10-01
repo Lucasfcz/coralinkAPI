@@ -52,11 +52,69 @@ public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    @Value("${coralink.cors.allowed-origins:}")
-    private String allowedOrigins;
+    @Bean
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        http
+                .csrf(AbstractHttpConfigurer::disable)
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .exceptionHandling(exceptions -> exceptions
+                        .authenticationEntryPoint(authenticationEntryPoint())
+                        .accessDeniedHandler(accessDeniedHandler())
+                )
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**", "/v3/api-docs.yaml").permitAll()
+                        .requestMatchers("/error").permitAll()
 
-    @Value("${coralink.cors.frontend-url:}")
-    private String frontendUrl;
+                        // 1. Endpoints de autenticação pública (Login Google, Registro Local, Login Local, Refresh, Logout)
+                        .requestMatchers("/auth/**").permitAll()
+
+                        // 2. Consulta pública as oportunidades (feed e buscas para estudantes sem autenticação)
+                        .requestMatchers(HttpMethod.GET, "/opportunities", "/opportunities/**").permitAll()
+
+                        // 3. Envio de sugestões/ajuda por estudantes (exige usuário autenticado)
+                        .requestMatchers(HttpMethod.POST, "/suggestion/create").authenticated()
+
+                        // 5. Visualização de sugestões de estudantes (exclusivo para ADMIN)
+                        .requestMatchers(HttpMethod.GET, "/suggestion/**").hasRole("ADMIN")
+
+                        // 6. Todos os endpoints administrativos (/admin/**) exigem papel ROLE_ADMIN
+                        .requestMatchers("/admin/**").hasRole("ADMIN")
+
+                        .anyRequest().authenticated()
+                )
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+
+        return http.build();
+    }
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+
+        Set<String> origins = new LinkedHashSet<>(List.of(
+                "http://localhost:3000",
+                "http://127.0.0.1:3000",
+                "http://localhost:3001",
+                "http://127.0.0.1:3001",
+                "http://localhost:3002",
+                "http://127.0.0.1:3002",
+                "https://coralink.me",
+                "https://www.coralink.me",
+                "https://coralink.vercel.app"
+        ));
+
+        configuration.setAllowedOriginPatterns(new ArrayList<>(origins));
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept", "Origin", "X-Requested-With"));
+        configuration.setExposedHeaders(List.of("Authorization", "Set-Cookie"));
+        configuration.setAllowCredentials(true);
+        configuration.setMaxAge(3600L);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
+    }
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -99,90 +157,5 @@ public class SecurityConfig {
 
             response.getWriter().write(objectMapper.writeValueAsString(error));
         };
-    }
-
-    @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http
-                .csrf(AbstractHttpConfigurer::disable)
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .exceptionHandling(exceptions -> exceptions
-                        .authenticationEntryPoint(authenticationEntryPoint())
-                        .accessDeniedHandler(accessDeniedHandler())
-                )
-                .authorizeHttpRequests(auth -> auth
-                        // 0. Tratamento interno de erros do Servlet/Spring MVC
-                        .requestMatchers("/error").permitAll()
-
-                        // 1. Endpoints de autenticação pública (Login Google, Registro Local, Login Local, Refresh, Logout)
-                        .requestMatchers("/auth/**").permitAll()
-
-                        // 2. Consulta pública a oportunidades (feed e buscas para estudantes sem autenticação)
-                        .requestMatchers(HttpMethod.GET, "/opportunities", "/opportunities/**").permitAll()
-
-                        // 3. Envio de sugestões/ajuda por estudantes (exige usuário autenticado)
-                        .requestMatchers(HttpMethod.POST, "/suggestion/create").authenticated()
-
-                        // 4. Documentação interativa Swagger/OpenAPI
-                        .requestMatchers(
-                                "/swagger-ui/**",
-                                "/swagger-ui.html",
-                                "/v3/api-docs/**",
-                                "/v3/api-docs.yaml"
-                        ).permitAll()
-
-                        // 5. Visualização de sugestões de estudantes (exclusivo para ADMIN)
-                        .requestMatchers(HttpMethod.GET, "/suggestion/**").hasRole("ADMIN")
-
-                        // 6. Todos os endpoints administrativos (/admin/**) exigem papel ROLE_ADMIN
-                        .requestMatchers("/admin/**").hasRole("ADMIN")
-
-                        // 7. Qualquer outra rota exige autenticação
-                        .anyRequest().authenticated()
-                )
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
-
-        return http.build();
-    }
-
-    @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration configuration = new CorsConfiguration();
-
-        Set<String> origins = new LinkedHashSet<>(List.of(
-                "http://localhost:3000",
-                "http://127.0.0.1:3000",
-                "http://localhost:3001",
-                "http://127.0.0.1:3001",
-                "http://localhost:3002",
-                "http://127.0.0.1:3002",
-                "https://coralink.vercel.app"
-        ));
-
-        if (allowedOrigins != null && !allowedOrigins.isBlank()) {
-            Arrays.stream(allowedOrigins.split(","))
-                    .map(String::trim)
-                    .filter(s -> !s.isEmpty())
-                    .forEach(origins::add);
-        }
-
-        if (frontendUrl != null && !frontendUrl.isBlank()) {
-            String cleanFrontend = frontendUrl.trim().replaceAll("/+$", "");
-            if (!cleanFrontend.isEmpty()) {
-                origins.add(cleanFrontend);
-            }
-        }
-
-        configuration.setAllowedOriginPatterns(new ArrayList<>(origins));
-        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept", "Origin", "X-Requested-With"));
-        configuration.setExposedHeaders(List.of("Authorization", "Set-Cookie"));
-        configuration.setAllowCredentials(true);
-        configuration.setMaxAge(3600L);
-
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration);
-        return source;
     }
 }

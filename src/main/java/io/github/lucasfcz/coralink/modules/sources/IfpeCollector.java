@@ -36,7 +36,12 @@ public class IfpeCollector extends WordPressCollector {
         for (String campus : campusPaths()) {
             String endpoint = endpointForCampus(campus);
             try {
-                result.addAll(fetchPosts(endpoint));
+                List<NewsSummary> campusNews = fetchPosts(endpoint);
+                result.addAll(campusNews);
+                if (isDevMode() && !result.isEmpty()) {
+                    log.info("[DEV] Coletada 1 oportunidade do campus IFPE '{}'; encerrando varredura rápida", campus);
+                    return List.of(result.get(0));
+                }
             } catch (Exception exception) {
                 log.warn("Falha ao coletar notícias do campus IFPE '{}'; ignorando", campus, exception);
             }
@@ -44,13 +49,13 @@ public class IfpeCollector extends WordPressCollector {
         return result;
     }
 
-
     protected List<String> campusPaths() {
         return CAMPUS;
     }
 
     protected String endpointForCampus(String campus) {
-        return baseUrl() + "/" + campus + "/wp-json/wp/v2/posts?per_page=20";
+        int perPage = isDevMode() ? 1 : 20;
+        return baseUrl() + "/" + campus + "/wp-json/wp/v2/posts?per_page=" + perPage;
     }
 
     @Override

@@ -108,9 +108,10 @@ class OpportunityServiceTest {
 
         Page<OpportunityResponse> result = opportunityService.getRelevantOpportunities(
                 "Workshop",
-                OpportunityType.WORKSHOP,
+                Set.of(OpportunityType.WORKSHOP),
                 Set.of(TargetCourseAudience.COMPUTER_SCIENCE),
                 Modality.ONLINE,
+                null,
                 true,
                 true,
                 pageable

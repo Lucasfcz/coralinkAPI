@@ -37,6 +37,17 @@ public abstract class AbstractCollector implements Collector {
 
     protected abstract String imageFallBackUrl();
 
+    @org.springframework.beans.factory.annotation.Value("${coralink.scraping.dev-mode:false}")
+    private boolean devMode = false;
+
+    public boolean isDevMode() {
+        return devMode;
+    }
+
+    public void setDevMode(boolean devMode) {
+        this.devMode = devMode;
+    }
+
     @Override
     public String fallbackImageUrl() {
         return imageFallBackUrl();

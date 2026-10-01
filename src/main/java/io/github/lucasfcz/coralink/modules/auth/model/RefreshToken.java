@@ -1,12 +1,13 @@
 package io.github.lucasfcz.coralink.modules.auth.model;
 
 import jakarta.persistence.*;
-import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.proxy.HibernateProxy;
 
 import java.time.Instant;
+import java.util.Objects;
 
 /**
  * Entidade que armazena os tokens de renovação (Refresh Tokens) de sessões de usuários.
@@ -18,7 +19,6 @@ import java.time.Instant;
 @Getter
 @Setter
 @NoArgsConstructor
-@EqualsAndHashCode(of = "id")
 public class RefreshToken {
 
     @Id
@@ -58,5 +58,21 @@ public class RefreshToken {
      */
     public boolean isValid() {
         return !this.revoked && Instant.now().isBefore(this.expiresAt);
+    }
+
+    @Override
+    public final boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null) return false;
+        Class<?> oEffectiveClass = o instanceof HibernateProxy ? ((HibernateProxy) o).getHibernateLazyInitializer().getPersistentClass() : o.getClass();
+        Class<?> thisEffectiveClass = this instanceof HibernateProxy ? ((HibernateProxy) this).getHibernateLazyInitializer().getPersistentClass() : this.getClass();
+        if (thisEffectiveClass != oEffectiveClass) return false;
+        RefreshToken that = (RefreshToken) o;
+        return getId() != null && Objects.equals(getId(), that.getId());
+    }
+
+    @Override
+    public final int hashCode() {
+        return this instanceof HibernateProxy ? ((HibernateProxy) this).getHibernateLazyInitializer().getPersistentClass().hashCode() : getClass().hashCode();
     }
 }
