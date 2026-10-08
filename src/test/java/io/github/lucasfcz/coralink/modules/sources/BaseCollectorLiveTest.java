@@ -66,7 +66,7 @@ public abstract class BaseCollectorLiveTest {
         }
 
         // Validação da coleta detalhada no primeiro item coletado
-        NewsSummary first = summaries.get(0);
+        NewsSummary first = summaries.getFirst();
         System.out.printf("[%s] Disparando requisição HTTP real para coleta detalhada: '%s' (%s)...%n",
                 expectedSourceName, first.title(), first.url());
 
