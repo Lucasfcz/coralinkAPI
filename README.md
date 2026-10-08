@@ -20,7 +20,7 @@
 
 ---
 
-## 📑 Sumário
+## Sumário
 
 - [1. Visão Geral](#1-visão-geral)
 - [2. Arquitetura do Sistema (Package by Feature)](#2-arquitetura-do-sistema-package-by-feature)
@@ -30,7 +30,7 @@
 - [6. Como Contribuir Adicionando Novas Fontes (Guia de Pull Request)](#6-como-contribuir-adicionando-novas-fontes-guia-de-pull-request)
 - [7. Configuração e Execução do Projeto](#7-configuração-e-execução-do-projeto)
 - [8. Testes Automatizados & Qualidade](#8-testes-automatizados--qualidade)
-- [9. Licença](#9-licença)
+- [9. Notas sobre o Projeto](#9-notas-sobre-o-projeto)
 
 ---
 
@@ -39,7 +39,7 @@
 O **Coralink API** é um serviço back-end construído em **Java 21** e **Spring Boot**, com o objetivo de resolver a fragmentação de oportunidades acadêmicas, editais, estágios, bolsas de pesquisa, cursos e eventos de tecnologia na Região Metropolitana do Recife (RMR) e polos educacionais.
 
 O sistema:
-1. **Monitora continuamente portais e centros de referência** (CIn-UFPE, UFPE, IFPE, UPE, Porto Digital, CESAR School, UNIBRA, UNIFAFIRE, Facepe, Senac-PE, Sympla).
+1. **Monitora continuamente portais e centros de referência acadêmicos, tecnológicos e educacionais** por meio de uma arquitetura modular e plugável de coletores autônomos.
 2. **Ingere e deduplica publicações brutas** em tempo real.
 3. **Executa um funil de enriquecimento via Inteligência Artificial** (Google Gemini Flash via Spring AI) composto por:
    - **Fase 1 (Triagem):** Classificação semântica binária de relevância prática para universitários.
@@ -170,9 +170,9 @@ O Coralink adota **Defesa em Profundidade** (*Defense in Depth*):
 ## 5. Catálogo de Endpoints da API REST
 
 A documentação interativa completa (OpenAPI 3.0 / Swagger UI) está disponível em:
-👉 `http://localhost:8080/swagger-ui/index.html`
+`http://localhost:8080/swagger-ui/index.html`
 
-### 🔑 Autenticação (`/auth`)
+### Autenticação (`/auth`)
 | Método | Endpoint | Descrição | Acesso |
 | :--- | :--- | :--- | :--- |
 | `POST` | `/auth/register` | Cadastro de usuário local (e-mail + senha com BCrypt) | Público |
@@ -182,7 +182,7 @@ A documentação interativa completa (OpenAPI 3.0 / Swagger UI) está disponíve
 | `POST` | `/auth/logout` | Revogação de sessão e limpeza de cookies | Público |
 | `GET` | `/auth/me` | Dados do usuário autenticado e suas permissões | Autenticado |
 
-### 🎓 Oportunidades (`/opportunities`)
+### Oportunidades (`/opportunities`)
 | Método | Endpoint | Descrição | Acesso |
 | :--- | :--- | :--- | :--- |
 | `GET` | `/opportunities` | Listagem paginada com filtros (`type`, `modality`, `isFree`, `targetCourseAudiences`) | Público (Cacheado) |
@@ -190,7 +190,7 @@ A documentação interativa completa (OpenAPI 3.0 / Swagger UI) está disponíve
 | `GET` | `/opportunities/search` | Busca de oportunidades por termo no título ou descrição | Público (Cacheado) |
 | `GET` | `/opportunities/{id}` | Detalhes completos de uma oportunidade pelo ID | Público (Cacheado) |
 
-### 🛠️ Painel Administrativo (`/admin`)
+### Painel Administrativo (`/admin`)
 | Método | Endpoint | Descrição | Acesso |
 | :--- | :--- | :--- | :--- |
 | `GET` | `/admin/dashboard/metrics` | Métricas de conversão da esteira, funil de IA e contagem de falhas | `ROLE_ADMIN` |
@@ -202,7 +202,7 @@ A documentação interativa completa (OpenAPI 3.0 / Swagger UI) está disponíve
 | `PUT` | `/admin/opportunities/{id}`| Correção manual de dados cadastrais e expiração | `ROLE_ADMIN` |
 | `DELETE`| `/admin/opportunities/{id}`| Soft delete de oportunidade (expiração retroativa para ontem) | `ROLE_ADMIN` |
 
-### 💡 Ajuda & Sugestões (`/suggestion`)
+### Ajuda & Sugestões (`/suggestion`)
 | Método | Endpoint | Descrição | Acesso |
 | :--- | :--- | :--- | :--- |
 | `POST` | `/suggestion/create` | Registro de sugestão de nova funcionalidade ou feedback | Público |
@@ -216,8 +216,10 @@ A documentação interativa completa (OpenAPI 3.0 / Swagger UI) está disponíve
 > **Arquitetura 100% Desacoplada:**  
 > O Coralink adota o Princípio Aberto/Fechado (OCP). Adicionar uma nova fonte **não exige alterar nenhuma classe existente do sistema**.
 
-### Passo 1: Leia o pacote collector em `io.github.lucasfcz.coralink.modules.sources.collector`
-Entenda como funciona as classes abstratas e como podem ser adpatadas para criar uma nova fonte.
+### Passo 1: Conheça as Classes Base em `io.github.lucasfcz.coralink.modules.sources.collector`
+O sistema disponibiliza classes base especializadas que estendem `AbstractCollector`:
+- `HtmlCollector`: Para páginas web HTML convencionais, utilizando Jsoup para extração de listas de notícias e detalhamento de conteúdo.
+- `WordPressCollector`: Para portais baseados em WordPress, consumindo estruturadamente a API REST nativa (`/wp-json/wp/v2/posts`).
 
 ### Passo 2: Crie sua Branch a partir de `development`
 Antes de codificar, sincronize com a branch `development` e crie uma branch isolada para sua contribuição:
@@ -228,99 +230,105 @@ git checkout -b feature/fonte-minha-instituicao
 ```
 
 ### Passo 3: Crie o Coletor
-Crie uma nova classe no pacote `io.github.lucasfcz.coralink.modules.sources` implementando a interface `WordPressCollector` / `HtmlCollector` (você precisará identificar se a sua fonte possui Wordpress primeiro caso não tenha use o HtmlCollector):
+Crie uma nova classe no pacote `io.github.lucasfcz.coralink.modules.sources` herdando de `HtmlCollector` (ou de `WordPressCollector`, se o portal fornecer API do WordPress):
 
 ```java
 package io.github.lucasfcz.coralink.modules.sources;
 
-import io.github.lucasfcz.coralink.modules.sources.collector.Collector;
-import io.github.lucasfcz.coralink.modules.sources.dto.DetailedContent;
+import io.github.lucasfcz.coralink.modules.sources.collector.HtmlCollector;
 import io.github.lucasfcz.coralink.modules.sources.dto.NewsSummary;
-import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.springframework.stereotype.Component;
 
-import java.io.IOException;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 
 @Component
-public class MinhaInstituicaoCollector implements HtmlCollector {
+public class MinhaInstituicaoCollector extends HtmlCollector {
 
     private static final String BASE_URL = "https://minhainstituicao.edu.br/noticias";
     private static final String FALLBACK_IMAGE = "https://minhainstituicao.edu.br/logo.png";
 
     @Override
-    public String sourceName() {
-        return "MINHA_INSTITUICAO"; // Identificador único em String
-    }
-
-       // Adapte o codigo para coletar a fonte em questão caso nescessário
-    @Override
-    public List<NewsSummary> collect() {
-        List<NewsSummary> list = new ArrayList<>();
-        try {
-            Document doc = Jsoup.connect(BASE_URL).timeout(10000).get();
-            for (Element item : doc.select("article.noticia")) {
-                String title = item.select("h2.title").text();
-                String url = item.select("a").attr("href");
-                String summary = item.select("p.resumo").text();
-
-                list.add(new NewsSummary(title, summary, url, sourceName(), LocalDateTime.now()));
-            }
-        } catch (IOException e) {
-            // Trate falhas de conectividade pontuais sem interromper o serviço
-        }
-        return list;
-    }
-
-        // Este método é referente a página dedicada da oportunidade
-        //  onde também pode ser preciso fazer adaptações
-    @Override
-    public DetailedContent detailedCollect(String newsUrl) {
-        try {
-            Document doc = Jsoup.connect(newsUrl).timeout(10000).get();
-            String fullText = doc.select("div.noticia-conteudo").text();
-            String imageUrl = doc.select("div.banner img").attr("src");
-            return new DetailedContent(fullText, imageUrl.isBlank() ? FALLBACK_IMAGE : imageUrl);
-        } catch (IOException e) {
-            return new DetailedContent("", FALLBACK_IMAGE);
-        }
+    protected String baseUrl() {
+        return BASE_URL;
     }
 
     @Override
-    public String fallbackImageUrl() {
+    protected String imageFallBackUrl() {
         return FALLBACK_IMAGE;
+    }
+
+    @Override
+    public String sourceName() {
+        return "MINHA_INSTITUICAO";
+    }
+
+    @Override
+    protected String pageUrl() {
+        return BASE_URL;
+    }
+
+    @Override
+    protected List<Element> articles(Document document) {
+        if (document == null) {
+            return List.of();
+        }
+        return document.select("article.noticia");
+    }
+
+    @Override
+    protected NewsSummary mapArticle(Element article) {
+        Element link = article.selectFirst("h2.title a");
+        if (link == null) {
+            return null;
+        }
+
+        String title = link.text().trim();
+        String url = link.absUrl("href");
+
+        if (title.isBlank() || url.isBlank()) {
+            return null;
+        }
+
+        String summary = title;
+        Element descEl = article.selectFirst("p.resumo");
+        if (descEl != null && !descEl.text().isBlank()) {
+            summary = descEl.text().trim();
+        }
+
+        return new NewsSummary(title, summary, url, sourceName(), LocalDateTime.now());
     }
 }
 ```
 
-### Passo 4: Crie o Teste Unitário do seu Coletor
-Crie o teste em `src/test/java/io/github/lucasfcz/coralink/modules/sources/MinhaInstituicaoCollectorTest.java`:
+O método `collect()` já vem implementado na classe base `HtmlCollector`, orquestrando a listagem de artigos, filtragem de nulos e o limite de desenvolvimento (`devMode`).
+O método `detailedCollect(url)` também já vem implementado por padrão, extraindo o texto integral via seletores heurísticos comuns e limpando ruídos de layout. Caso o portal necessite de uma extração customizada, basta sobrescrever `detailedCollect(url)` retornando uma instância de `new DetailedContent(fullText)`.
+
+Caso o portal utilize WordPress, basta estender `WordPressCollector` e definir `baseUrl()`, `imageFallBackUrl()` e `sourceName()`. O consumo dos posts e detalhamentos via WP REST API já é gerenciado automaticamente pela classe base.
+
+### Passo 4: Crie o Teste de Integração do seu Coletor
+Crie o teste em `src/test/java/io/github/lucasfcz/coralink/modules/sources/MinhaInstituicaoCollectorTest.java` estendendo `BaseCollectorLiveTest`:
 
 ```java
 package io.github.lucasfcz.coralink.modules.sources;
 
-import io.github.lucasfcz.coralink.modules.sources.dto.NewsSummary;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import java.util.List;
-import static org.junit.jupiter.api.Assertions.*;
 
-class MinhaInstituicaoCollectorTest {
-
-    private final MinhaInstituicaoCollector collector = new MinhaInstituicaoCollector();
+class MinhaInstituicaoCollectorTest extends BaseCollectorLiveTest {
 
     @Test
-    void testCollectReturnsData() {
-        assertEquals("MINHA_INSTITUICAO", collector.sourceName());
-        List<NewsSummary> summaries = collector.collect();
-        assertNotNull(summaries);
-        // Validar integridade dos resumos coletados
+    @DisplayName("Teste de integracao ao vivo: MINHA_INSTITUICAO")
+    void testLiveCollection() {
+        MinhaInstituicaoCollector collector = new MinhaInstituicaoCollector();
+        assertCollectorLive(collector, "MINHA_INSTITUICAO");
     }
 }
 ```
+
+O método utilitário `assertCollectorLive` dispara requisições HTTP reais contra o portal, validando a estabilidade da URL, seletores, integridade de títulos, links e resumos, bem como o detalhamento de conteúdo.
 
 ### Passo 5: Valide Localmente
 Execute o comando Maven para garantir que seu coletor e a suíte completa passem com sucesso:
@@ -332,7 +340,7 @@ Execute o comando Maven para garantir que seu coletor e a suíte completa passem
 ### Passo 6: Abra o Pull Request
 1. Faça o commit e push da sua branch: `git push origin feature/fonte-minha-instituicao`.
 2. Abra um **Pull Request** apontando para a branch `development`, explicando a implementação e citando o portal integrado.
-3. Nossa equipe técnica avaliará o coletor, validará a estabilidade da URL e aprovará a integração!
+3. A equipe técnica avaliará o coletor, validará a estabilidade da URL e aprovará a integração.
 
 ---
 
@@ -376,17 +384,39 @@ A API estará pronta para receber requisições em: `http://localhost:8080`
 
 ## 8. Testes Automatizados & Qualidade
 
-A aplicação conta com uma rigorosa suíte de testes cobrindo testes unitários, validação de tokens JWT, testes de segurança MockMvc, desserialização de cache Redis e testes de coletores:
+A aplicação conta com uma rigorosa suíte de testes cobrindo testes unitários, validação de tokens JWT, testes de segurança MockMvc, desserialização de cache Redis e testes de coletores de fontes.
+
+### Testes de Fontes (Coletores)
+Como o ecossistema depende de portais externos de terceiros cujos layouts e marcações HTML podem sofrer alterações sem aviso prévio, os testes de fontes são tratados como **testes de integração ao vivo** (*Live Integration Tests*):
+
+- **Requisições Reais:** Em vez de utilizar mocks estáticos para dados externos, as classes que estendem `BaseCollectorLiveTest` realizam chamadas HTTP reais contra os portais monitorados.
+- **Validação com `assertCollectorLive`:** Cada teste assegura que:
+  - Os metadados da fonte (`sourceName` e `fallbackImageUrl`) são válidos e a imagem possui protocolo HTTP/HTTPS absoluto.
+  - O método `collect()` retorna uma lista não nula e com oportunidades ativas (impedindo que quebras silenciosas em seletores passem despercebidas).
+  - Cada item coletado possui título com tamanho mínimo de 4 caracteres e não corresponde a textos genéricos de interface (como *"ler mais"*, *"saiba mais"*, *"banner"*, *"sem título"*, etc.).
+  - A URL do anúncio é absoluta e válida, o resumo curto está preenchido e a data de captura está registrada.
+  - O método `detailedCollect(url)` é testado com a primeira notícia retornada, garantindo que o texto extraído possua ao menos 50 caracteres úteis de conteúdo editorial.
+- **Suporte a Dev Mode:** Os coletores possuem verificação para o modo de desenvolvimento (`setDevMode(true)`), assegurando que o scraping seja delimitado a no máximo 1 item por fonte para viabilizar testes e ciclos locais rápidos sem onerar o ambiente nem os portais externos.
 
 ```bash
-# Executar toda a suíte de testes
+# Executar todos os testes de coletores ao vivo
+./mvnw test -Dtest=*CollectorTest
+
+# Executar um teste especifico de coletor
+./mvnw test -Dtest=UfpeCollectorTest
+
+# Executar toda a suite de testes da aplicacao
 ./mvnw clean test
 ```
 
-Status atual: **97 testes executados, 0 falhas, 0 erros.**
+Status atual: **110 testes executados, 0 falhas, 0 erros.**
 
 ---
 
-## 9. Licença
+## 9. Notas sobre o Projeto
 
-Este projeto é disponibilizado sob a licença [MIT](LICENSE). Sinta-se livre para utilizar, colaborar e evoluir a plataforma.
+### Estado Atual e Diagnóstico da Coleta da UFPE
+- **Status do Coletor no Código:** A implementação do coletor da UFPE (`UfpeCollector`) está 100% correta, funcional e validada. Ela passa com sucesso em todos os testes unitários e testes de integração ao vivo locais (`UfpeCollectorTest`), extraindo notícias, títulos, resumos e conteúdos detalhados sem falhas.
+- **Cenário de Produção no Render:** A API encontra-se atualmente em deploy no Render, com infraestrutura hospedada em servidores nos Estados Unidos (EUA). O portal oficial da UFPE (`www.ufpe.br`) adota políticas restritivas de firewall/WAF e geoblocking na infraestrutura de rede institucional, recusando ou descartando conexões HTTP originadas de fora do Brasil.
+- **Impacto:** Devido a essa restrição geográfica do portal de origem, as requisições executadas pelo serviço no Render sofrem timeout de conexão, impedindo temporariamente a gravação de dados brutos da UFPE na base de produção, muito embora o algoritmo de coleta esteja plenamente operacional.
+- **Tratamento e Próximos Passos:** Esse comportamento já está mapeado e diagnosticado pela equipe de engenharia. Alternativas de contorno estão sendo avaliadas, como a integração de um proxy reverso/egress localizado em território nacional ou a migração da hospedagem do back-end para data centers no Brasil.
