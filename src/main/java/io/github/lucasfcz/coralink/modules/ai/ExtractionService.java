@@ -75,8 +75,26 @@ public class ExtractionService {
         ## Regras para Thematic Area
         Identifique a área temática principal da oportunidade baseando-se no conteúdo (ex: "Desenvolvimento Web", "Inteligência Artificial", "Cibersegurança", "Banco de Dados", "Engenharia de Software", "Ciência de Dados", "Inovação"). Se for algo amplo ou não específico, use "GERAL".
 
-        ## Regras para TargetCourseAudience
-        Classifique o público nos enums correspondentes da classe TargetCourseAudience (ex: ADS, COMPUTER_SCIENCE, SOFTWARE_ENGINEERING, INFORMATION_SYSTEMS, COMPUTER_ENGINEERING, TECHNOLOGY_STUDENTS, UNIVERSITY_STUDENTS). Caso seja aberta para qualquer universitário, inclua UNIVERSITY_STUDENTS.
+        ## Regras Críticas para TargetCourseAudience
+        Classifique o público-alvo estritamente usando apenas os seguintes enums válidos, agrupados por área:
+        - Tecnologia: ADS, COMPUTER_SCIENCE, SOFTWARE_ENGINEERING, INFORMATION_SYSTEMS, COMPUTER_ENGINEERING, DATA_SCIENCE, TECHNOLOGY_STUDENTS
+        - Saúde: MEDICINE, NURSING, PHARMACY, PHYSICAL_THERAPY, PSYCHOLOGY, PHYSICAL_EDUCATION, DENTISTRY, BIOMEDICINE, NUTRITION, VETERINARY_MEDICINE, AESTHETICS, HEALTH_STUDENTS
+        - Negócios e Gestão: BUSINESS_ADMINISTRATION, ACCOUNTING, ECONOMICS, BUSINESS_STUDENTS
+        - Comunicação e Design: DESIGN, GRAPHIC_DESIGN, MARKETING, ADVERTISING, JOURNALISM
+        - Engenharias (não-computação): CIVIL_ENGINEERING, ELECTRICAL_ENGINEERING, MECHANICAL_ENGINEERING, PRODUCTION_ENGINEERING, CHEMICAL_ENGINEERING, ENGINEERING_STUDENTS
+        - Ciências Exatas: MATHEMATICS, STATISTICS, PHYSICS, CHEMISTRY, EXACT_SCIENCES_STUDENTS
+        - Direito e Humanas: LAW, PEDAGOGY, SOCIAL_WORK, LANGUAGE_AND_LITERATURE, HUMANITIES_STUDENTS
+        - Outras Aplicadas: ARCHITECTURE_AND_URBANISM, TOURISM_AND_HOSPITALITY, GASTRONOMY
+        - Público Universal: UNIVERSITY_STUDENTS
+
+        DIRETRIZES DE CLASSIFICAÇÃO PRECISA:
+        1. Rigor e Isolamento de Área: O público-alvo deve ser cirúrgico e condizente com o escopo da oportunidade. Nunca misture cursos de áreas não correlatas.
+           - Se a oportunidade for de Tecnologia, utilize APENAS enums do grupo de Tecnologia (ex: ADS, COMPUTER_SCIENCE, SOFTWARE_ENGINEERING, INFORMATION_SYSTEMS, COMPUTER_ENGINEERING, DATA_SCIENCE e o geral TECHNOLOGY_STUDENTS). Jamais inclua cursos de Saúde, Direito ou Negócios.
+           - Se a oportunidade for da área de Saúde (medicina, enfermagem, farmácia, etc.), utilize APENAS os cursos específicos de Saúde aplicáveis e o geral HEALTH_STUDENTS. Jamais inclua enums de Tecnologia ou outras áreas.
+           - Se for de Negócios/Administração, Direito, Engenharias ou Comunicação, aplique estritamente o mesmo princípio de isolamento para a sua respectiva área.
+        2. Regra para UNIVERSITY_STUDENTS:
+           - Inclua UNIVERSITY_STUDENTS APENAS E EXCLUSIVAMENTE se o edital/oportunidade for expressamente aberto e relevante a estudantes universitários de qualquer curso ou área de graduação, sem qualquer restrição técnica, temática ou de formação (ex: edital geral de bolsas de permanência, feira de carreiras multissetorial, seminário de boas-vindas).
+           - NUNCA inclua UNIVERSITY_STUDENTS em oportunidades com foco temático específico (como um hackathon de IA, congresso de fisioterapia ou curso de programação), para garantir que os filtros dos estudantes por área exibam somente oportunidades relevantes para seu curso.
 
         ## Regras para Modality
         Classifique em: ONLINE, IN_PERSON ou HYBRID.
