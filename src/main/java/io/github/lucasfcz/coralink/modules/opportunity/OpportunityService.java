@@ -1,15 +1,20 @@
 package io.github.lucasfcz.coralink.modules.opportunity;
 
+import io.github.lucasfcz.coralink.modules.auth.model.User;
 import io.github.lucasfcz.coralink.modules.opportunity.dto.OpportunityResponse;
 import io.github.lucasfcz.coralink.modules.opportunity.enums.*;
 import io.github.lucasfcz.coralink.infra.exception.NotFoundException;
 import io.github.lucasfcz.coralink.modules.opportunity.model.Opportunity;
 import io.github.lucasfcz.coralink.modules.opportunity.repository.OpportunityRepository;
+import io.github.lucasfcz.coralink.modules.preferences.model.UserPreferences;
+import io.github.lucasfcz.coralink.modules.preferences.repository.UserPreferencesRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,10 +30,22 @@ public class OpportunityService {
 
     private final OpportunityRepository opportunityRepository;
     private final OpportunityMapper opportunityMapper;
+    private final UserPreferencesRepository userPreferencesRepository;
+
+    public static Long resolveCurrentUserId() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getPrincipal() instanceof User user) {
+            return user.getId();
+        }
+        return 0L;
+    }
 
     // Retorna apenas oportunidades ativas segundo a regra temporal de vigência, aplicando filtros dinâmicos via JPA Specification.
 
-    @Cacheable(value = "opportunities", key = "{#title, #types, #targetCourseAudiences, #modality, #sourceNames, #isFree, #isForAll, #pageable}")
+    @Cacheable(
+            value = "opportunities",
+            key = "{T(io.github.lucasfcz.coralink.modules.opportunity.OpportunityService).resolveCurrentUserId(), #title, #types, #targetCourseAudiences, #modality, #sourceNames, #isFree, #isForAll, #pageable}"
+    )
     public Page<OpportunityResponse> getRelevantOpportunities(
             String title,
             Set<OpportunityType> types,
@@ -41,7 +58,16 @@ public class OpportunityService {
 
         var spec = OpportunitySpecifications.filters(title, types, targetCourseAudiences, modality, sourceNames, isFree, isForAll);
         if (pageable != null && pageable.getSort().isUnsorted()) {
-            spec = spec.and(OpportunitySpecifications.defaultSmartUrgencyOrder());
+            Long currentUserId = resolveCurrentUserId();
+            UserPreferences prefs = (currentUserId != null && currentUserId > 0)
+                    ? userPreferencesRepository.findByUserId(currentUserId).orElse(null)
+                    : null;
+
+            if (prefs != null) {
+                spec = spec.and(OpportunitySpecifications.scoringOrder(prefs));
+            } else {
+                spec = spec.and(OpportunitySpecifications.defaultSmartUrgencyOrder());
+            }
         }
 
         return opportunityRepository.findAll(spec, pageable).map(opportunityMapper::toResponse);

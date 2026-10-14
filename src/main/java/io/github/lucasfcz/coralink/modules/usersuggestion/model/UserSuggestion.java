@@ -1,17 +1,19 @@
-package io.github.lucasfcz.coralink.modules.userhelp.model;
+package io.github.lucasfcz.coralink.modules.usersuggestion.model;
 
-import io.github.lucasfcz.coralink.modules.userhelp.model.SuggestionType;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Size;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.CreationTimestamp;
+
+import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "user_help")
+@Table(name = "user_suggestions")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class UserHelp {
+public class UserSuggestion {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -26,15 +28,15 @@ public class UserHelp {
     @Size(max = 5000)
     private String suggestion;
 
-    // E-mail opcional do usuário, caso ele deseje receber retorno da equipe sobre a sugestão ou ajuda enviada.
+    // E-mail opcional do usuário, caso ele deseje receber retorno da equipe sobre a sugestão enviada.
     @Column
     private String userEmail;
 
-    @org.hibernate.annotations.CreationTimestamp
+    @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
-    private java.time.LocalDateTime createdAt;
+    private LocalDateTime createdAt;
 
-    public UserHelp(SuggestionType type, String suggestion, String userEmail) {
+    public UserSuggestion(SuggestionType type, String suggestion, String userEmail) {
         this.type = type;
         this.suggestion = suggestion;
         this.userEmail = userEmail;

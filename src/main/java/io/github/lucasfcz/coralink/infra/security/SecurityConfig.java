@@ -75,11 +75,14 @@ public class SecurityConfig {
                         // 3. Envio de sugestões/ajuda por estudantes (exige usuário autenticado)
                         .requestMatchers(HttpMethod.POST, "/suggestion/create").authenticated()
 
-                        // 5. Visualização de sugestões de estudantes (exclusivo para ADMIN)
+                        // 4. Visualização de sugestões de estudantes (exclusivo para ADMIN)
                         .requestMatchers(HttpMethod.GET, "/suggestion/**").hasRole("ADMIN")
 
-                        // 6. Todos os endpoints administrativos (/admin/**) exigem papel ROLE_ADMIN
+                        // 5. Todos os endpoints administrativos (/admin/**) exigem papel ROLE_ADMIN
                         .requestMatchers("/admin/**").hasRole("ADMIN")
+
+                        // 6. Preferências do usuário (exige autenticação)
+                        .requestMatchers("/preferences", "/preferences/**").authenticated()
 
                         .anyRequest().authenticated()
                 )

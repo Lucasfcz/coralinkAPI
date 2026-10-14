@@ -1,10 +1,9 @@
-package io.github.lucasfcz.coralink.modules.userhelp;
+package io.github.lucasfcz.coralink.modules.usersuggestion;
 
 import io.github.lucasfcz.coralink.infra.config.OpenApiConfig;
-import io.github.lucasfcz.coralink.modules.userhelp.dto.UserHelpRequest;
-import io.github.lucasfcz.coralink.modules.userhelp.dto.UserHelpResponse;
-import io.github.lucasfcz.coralink.modules.userhelp.model.SuggestionType;
-import io.github.lucasfcz.coralink.modules.userhelp.UserHelpService;
+import io.github.lucasfcz.coralink.modules.usersuggestion.dto.UserSuggestionRequest;
+import io.github.lucasfcz.coralink.modules.usersuggestion.dto.UserSuggestionResponse;
+import io.github.lucasfcz.coralink.modules.usersuggestion.model.SuggestionType;
 import io.github.lucasfcz.coralink.modules.auth.AuthService;
 import io.github.lucasfcz.coralink.modules.auth.model.User;
 import io.swagger.v3.oas.annotations.Operation;
@@ -28,9 +27,9 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/suggestion")
 @RequiredArgsConstructor
 @Tag(name = "Sugestões e Ajuda", description = "Envio de feedback/sugestões por estudantes autenticados e consulta por administradores")
-public class UserHelpController {
+public class UserSuggestionController {
 
-    private final UserHelpService userHelpService;
+    private final UserSuggestionService userSuggestionService;
     private final AuthService authService;
 
     @Operation(
@@ -41,9 +40,9 @@ public class UserHelpController {
     @ApiResponse(responseCode = "401", description = "Não autenticado")
     @SecurityRequirement(name = OpenApiConfig.SECURITY_SCHEME_NAME)
     @PostMapping("/create")
-    public ResponseEntity<UserHelpResponse> createUserHelp(@Valid @RequestBody UserHelpRequest request) {
+    public ResponseEntity<UserSuggestionResponse> createUserSuggestion(@Valid @RequestBody UserSuggestionRequest request) {
         User currentUser = authService.getCurrentAuthenticatedUser();
-        return ResponseEntity.status(HttpStatus.CREATED).body(userHelpService.createUserHelp(request, currentUser));
+        return ResponseEntity.status(HttpStatus.CREATED).body(userSuggestionService.createUserSuggestion(request, currentUser));
     }
 
     @Operation(
@@ -54,22 +53,21 @@ public class UserHelpController {
     @SecurityRequirement(name = OpenApiConfig.SECURITY_SCHEME_NAME)
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping
-    public ResponseEntity<Page<UserHelpResponse>> getAllUserHelp(Pageable pageable) {
-        return ResponseEntity.ok(userHelpService.findAllUserHelp(pageable));
+    public ResponseEntity<Page<UserSuggestionResponse>> getAllUserSuggestions(Pageable pageable) {
+        return ResponseEntity.ok(userSuggestionService.findAllUserSuggestions(pageable));
     }
 
     @Operation(
-            summary = "Listar Sugestões por Tipo (ADMIN)",
-            description = "Consulta paginada de sugestões filtradas por categoria (ex: BUG, NEW_SOURCE, SUGGESTION). Restrito a administradores."
+            summary = "Filtrar Sugestões por Tipo (ADMIN)",
+            description = "Consulta paginada de sugestões filtradas por categoria (NEW_SOURCE, FEATURE, CORRECTION, BUG, OTHER). Restrito a administradores."
     )
-    @ApiResponse(responseCode = "200", description = "Lista retornada com sucesso")
+    @ApiResponse(responseCode = "200", description = "Lista filtrada retornada com sucesso")
     @SecurityRequirement(name = OpenApiConfig.SECURITY_SCHEME_NAME)
     @PreAuthorize("hasRole('ADMIN')")
-    @GetMapping("/{type}")
-    public ResponseEntity<Page<UserHelpResponse>> getAllUserHelpByType(
-            @Parameter(description = "Categoria da sugestão") @PathVariable SuggestionType type,
-            Pageable pageable
-    ) {
-        return ResponseEntity.ok(userHelpService.getUserHelpsByType(type, pageable));
+    @GetMapping("/type")
+    public ResponseEntity<Page<UserSuggestionResponse>> getUserSuggestionsByType(
+            @Parameter(description = "Tipo da sugestão") @RequestParam SuggestionType type,
+            Pageable pageable) {
+        return ResponseEntity.ok(userSuggestionService.getUserSuggestionsByType(type, pageable));
     }
 }
