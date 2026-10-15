@@ -21,6 +21,7 @@ public class RateLimiterService {
     @org.springframework.beans.factory.annotation.Value("${coralink.ratelimit.refill-duration-minutes:1}")
     private long refillDurationMinutes;
 
+    // Utilização do caffeine ao invés de Redis para execução direta na JVM para não passar por serviços externos acessando o Redis
     private final Cache<String, Bucket> buckets = Caffeine.newBuilder()
             .expireAfterAccess(10, TimeUnit.MINUTES)
             .maximumSize(10_000)

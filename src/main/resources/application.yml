@@ -1,0 +1,60 @@
+spring:
+  application:
+    name: coralink
+
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migrations
+
+  # Gemini (Google AI Studio)
+  ai:
+    google:
+      genai:
+        api-key: ${GEMINI_API_KEY:}
+        chat:
+          model: gemini-3.5-flash-lite
+
+  # Cache (Redis)
+  cache:
+    type: redis
+  data:
+    redis:
+      timeout: 2000ms
+
+coralink:
+  ai:
+    # Intervalo de espera preventiva entre chamadas à IA (6000ms = 6s)
+    rate-limit-delay-ms: ${AI_RATE_LIMIT_DELAY_MS:6000}
+
+  scheduler:
+    # Intervalo de execução do agendador do pipeline (4 horas = 14400000 ms)
+    source-check-rate-ms: 14400000
+
+  scraping:
+    # Limitação de varredura de notícias para ambiente de desenvolvimento (em dev limita a 1 oportunidade por fonte)
+    dev-mode: false
+
+  sources:
+    porto-digital:
+      # Token de Content Delivery do Storyblok (Porto Digital)
+      token: ${PORTO_DIGITAL_STORYBLOK_TOKEN:}
+
+  ratelimit:
+    # Rate Limiting por IP (Bucket4j)
+    capacity: ${RATE_LIMIT_CAPACITY:120}
+    refill-tokens: ${RATE_LIMIT_REFILL_TOKENS:120}
+    refill-duration-minutes: ${RATE_LIMIT_DURATION_MINUTES:1}
+
+  security:
+    # Segurança, JWT & Google OAuth2
+    # Segredo HMAC-SHA256 para assinatura de Access Tokens (mínimo de 256 bits)
+    secret: ${JWT_SECRET}
+    # Tempo de vida do Access Token (15 minutos = 900.000 ms)
+    access-token-expiration-ms: 900000
+    # Tempo de vida do Refresh Token (7 dias = 604.800.000 ms)
+    refresh-token-expiration-ms: 604800000
+    # Google OAuth2 Client ID registrado no Google Cloud Console
+    google-client-id: ${GOOGLE_CLIENT_ID:}

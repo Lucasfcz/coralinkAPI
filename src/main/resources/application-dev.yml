@@ -1,0 +1,38 @@
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/coralink}
+    username: ${DB_USERNAME:coralink}
+    password: ${DB_PASSWORD:coralink}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+  # Redis Dev (Local via Docker)
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      ssl:
+        enabled: false
+
+  # Chave Gemini para dev (evita falha de inicializacao do Spring AI se GEMINI_API_KEY nao for informada)
+  ai:
+    google:
+      genai:
+        api-key: ${GEMINI_API_KEY:dev-dummy-gemini-key}
+
+coralink:
+  security:
+    # Segredo JWT para dev (garante boot local imediato sem erros se JWT_SECRET não estiver exportado)
+    secret: ${JWT_SECRET:dev-secret-key-must-be-at-least-256-bits-long-for-hmac-sha256-signing!}
+
+  scraping:
+    # Em desenvolvimento, limita a raspagem de todos os coletores a apenas 1 oportunidade por fonte
+    dev-mode: true

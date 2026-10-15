@@ -4,7 +4,7 @@ import io.github.lucasfcz.coralink.modules.admin.AdminController;
 import io.github.lucasfcz.coralink.modules.auth.AuthController;
 import io.github.lucasfcz.coralink.modules.auth.AuthCookieService;
 import io.github.lucasfcz.coralink.modules.opportunity.OpportunityController;
-import io.github.lucasfcz.coralink.modules.userhelp.UserHelpController;
+import io.github.lucasfcz.coralink.modules.usersuggestion.UserSuggestionController;
 import io.github.lucasfcz.coralink.modules.opportunity.dto.OpportunityResponse;
 import io.github.lucasfcz.coralink.modules.pipeline.dto.PipelineStatusResponse;
 import io.github.lucasfcz.coralink.modules.auth.repository.UserRepository;
@@ -12,7 +12,7 @@ import io.github.lucasfcz.coralink.modules.auth.AuthService;
 import io.github.lucasfcz.coralink.modules.opportunity.OpportunityService;
 import io.github.lucasfcz.coralink.modules.admin.AdminDashboardService;
 import io.github.lucasfcz.coralink.modules.pipeline.PipelineService;
-import io.github.lucasfcz.coralink.modules.userhelp.UserHelpService;
+import io.github.lucasfcz.coralink.modules.usersuggestion.UserSuggestionService;
 import io.github.lucasfcz.coralink.infra.ratelimit.RateLimiterService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -35,7 +35,11 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(controllers = {AdminController.class, OpportunityController.class, UserHelpController.class, AuthController.class})
+import io.github.lucasfcz.coralink.modules.preferences.UserPreferencesController;
+import io.github.lucasfcz.coralink.modules.preferences.UserPreferencesService;
+import io.github.lucasfcz.coralink.modules.preferences.dto.UserPreferencesResponse;
+
+@WebMvcTest(controllers = {AdminController.class, OpportunityController.class, UserSuggestionController.class, AuthController.class, UserPreferencesController.class})
 @Import({
         SecurityConfig.class,
         JwtAuthenticationFilter.class,
@@ -60,7 +64,7 @@ class SecurityAccessControlTest {
     private AdminDashboardService adminDashboardService;
 
     @MockitoBean
-    private UserHelpService userHelpService;
+    private UserSuggestionService userSuggestionService;
 
     @MockitoBean
     private AuthService authService;
@@ -73,6 +77,9 @@ class SecurityAccessControlTest {
 
     @MockitoBean
     private org.springframework.cache.CacheManager cacheManager;
+
+    @MockitoBean
+    private UserPreferencesService userPreferencesService;
 
     @org.junit.jupiter.api.BeforeEach
     void setUpRateLimiter() {
@@ -187,14 +194,14 @@ class SecurityAccessControlTest {
         );
         when(authService.getCurrentAuthenticatedUser()).thenReturn(mockUser);
 
-        io.github.lucasfcz.coralink.modules.userhelp.dto.UserHelpResponse mockResponse =
-                new io.github.lucasfcz.coralink.modules.userhelp.dto.UserHelpResponse(
+        io.github.lucasfcz.coralink.modules.usersuggestion.dto.UserSuggestionResponse mockResponse =
+                new io.github.lucasfcz.coralink.modules.usersuggestion.dto.UserSuggestionResponse(
                         1L,
-                        io.github.lucasfcz.coralink.modules.userhelp.model.SuggestionType.FEATURE,
+                        io.github.lucasfcz.coralink.modules.usersuggestion.model.SuggestionType.FEATURE,
                         "Sugestão de nova funcionalidade",
                         "estudante@ufpe.br"
                 );
-        when(userHelpService.createUserHelp(any(), any())).thenReturn(mockResponse);
+        when(userSuggestionService.createUserSuggestion(any(), any())).thenReturn(mockResponse);
 
         String requestJson = """
                 {
@@ -224,13 +231,13 @@ class SecurityAccessControlTest {
     }
 
     @Test
-    @DisplayName("Security Success - CORS pre-flight from https://coralink.vercel.app must be allowed")
+    @DisplayName("Security Success - CORS pre-flight from https://coralink.me must be allowed")
     void corsShouldAllowVercelProduction() throws Exception {
         mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options("/auth/google")
-                        .header("Origin", "https://coralink.vercel.app")
+                        .header("Origin", "https://coralink.me")
                         .header("Access-Control-Request-Method", "POST"))
                 .andExpect(status().isOk())
-                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header().string("Access-Control-Allow-Origin", "https://coralink.vercel.app"))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header().string("Access-Control-Allow-Origin", "https://coralink.me"))
                 .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header().string("Access-Control-Allow-Credentials", "true"));
     }
 
@@ -261,5 +268,61 @@ class SecurityAccessControlTest {
                 .andExpect(status().isNoContent());
 
         org.mockito.Mockito.verify(opportunityService).softDeleteOpportunity(10L);
+    }
+
+    @Test
+    @DisplayName("Security Defense - Unauthenticated access to GET /preferences must return 401 Unauthorized")
+    void preferencesShouldBeUnauthorizedWithoutAuth() throws Exception {
+        mockMvc.perform(get("/preferences"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @DisplayName("Security Success - Authenticated user access to GET /preferences must return 200 OK")
+    @WithMockUser(username = "estudante@ufpe.br", roles = {"USER"})
+    void preferencesShouldSucceedForAuthenticatedUser() throws Exception {
+        io.github.lucasfcz.coralink.modules.auth.model.User user = new io.github.lucasfcz.coralink.modules.auth.model.User(
+                "estudante@ufpe.br",
+                "Estudante",
+                "avatar.png",
+                io.github.lucasfcz.coralink.modules.auth.model.Role.ROLE_USER
+        );
+        user.setId(5L);
+
+        when(authService.getCurrentAuthenticatedUser()).thenReturn(user);
+        when(userPreferencesService.getPreferencesByUserId(5L)).thenReturn(
+                new UserPreferencesResponse(
+                        1L,
+                        5L,
+                        java.util.Set.of(),
+                        java.util.Set.of(),
+                        java.util.Set.of(),
+                        false,
+                        java.time.LocalDateTime.now(),
+                        java.time.LocalDateTime.now()
+                )
+        );
+
+        mockMvc.perform(get("/preferences"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.userId").value(5));
+    }
+
+    @Test
+    @DisplayName("Security Defense - Unauthenticated access to POST /preferences must return 401 Unauthorized")
+    void preferencesPostShouldBeUnauthorizedWithoutAuth() throws Exception {
+        mockMvc.perform(post("/preferences")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @DisplayName("Security Defense - Unauthenticated access to PATCH /preferences must return 401 Unauthorized")
+    void preferencesPatchShouldBeUnauthorizedWithoutAuth() throws Exception {
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch("/preferences")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isUnauthorized());
     }
 }

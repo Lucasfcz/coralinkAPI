@@ -1,0 +1,38 @@
+spring:
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      data-source-properties:
+        prepareThreshold: 0
+
+  # Em produção, o Flyway é a única fonte da verdade de schema; ddl-auto deve ser validate
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+
+  # Redis Prod (Upstash via URL ou Host/Porta)
+  data:
+    redis:
+      url: ${REDIS_URL:}
+      host: ${REDIS_HOST:}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:${UPSTASH_REDIS_REST_TOKEN:}}
+      ssl:
+        enabled: ${REDIS_SSL:true}
+
+coralink:
+  security:
+    # Segurança em Produção: Variáveis obrigatórias sem fallback fraco
+    secret: ${JWT_SECRET}
+    google-client-id: ${GOOGLE_CLIENT_ID:}
+
+  scraping:
+    # Em producao, a varredura e completa e irrestrita
+    dev-mode: false

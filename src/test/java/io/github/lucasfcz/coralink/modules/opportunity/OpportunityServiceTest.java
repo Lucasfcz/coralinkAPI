@@ -9,6 +9,7 @@ import io.github.lucasfcz.coralink.modules.opportunity.OpportunityMapper;
 import io.github.lucasfcz.coralink.modules.opportunity.model.Opportunity;
 import io.github.lucasfcz.coralink.modules.pipeline.model.RawOpportunity;
 import io.github.lucasfcz.coralink.modules.opportunity.repository.OpportunityRepository;
+import io.github.lucasfcz.coralink.modules.preferences.repository.UserPreferencesRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -39,6 +40,9 @@ class OpportunityServiceTest {
 
     @Mock
     private OpportunityMapper opportunityMapper;
+
+    @Mock
+    private UserPreferencesRepository userPreferencesRepository;
 
     @InjectMocks
     private OpportunityService opportunityService;

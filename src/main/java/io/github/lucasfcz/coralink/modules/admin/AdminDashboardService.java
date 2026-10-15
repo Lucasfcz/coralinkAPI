@@ -4,7 +4,7 @@ import io.github.lucasfcz.coralink.modules.admin.dto.DashboardMetricsResponse;
 import io.github.lucasfcz.coralink.modules.admin.dto.RawFunnelMetrics;
 import io.github.lucasfcz.coralink.modules.opportunity.repository.OpportunityRepository;
 import io.github.lucasfcz.coralink.modules.pipeline.repository.RawOpportunityRepository;
-import io.github.lucasfcz.coralink.modules.userhelp.repository.UserHelpRepository;
+import io.github.lucasfcz.coralink.modules.usersuggestion.repository.UserSuggestionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,7 +23,7 @@ public class AdminDashboardService {
 
     private final OpportunityRepository opportunityRepository;
     private final RawOpportunityRepository rawOpportunityRepository;
-    private final UserHelpRepository userHelpRepository;
+    private final UserSuggestionRepository userSuggestionRepository;
     private final io.github.lucasfcz.coralink.modules.pipeline.RawOpportunityMapper rawOpportunityMapper;
 
     @Transactional(readOnly = true)
@@ -39,7 +39,7 @@ public class AdminDashboardService {
         double acceptanceRate = calculateAcceptanceRate(screenedRelevant, screenedIrrelevant);
         Map<String, Long> byType = mapGroupedCount(opportunityRepository.countActiveGroupedByType());
         Map<String, Long> bySource = mapGroupedCount(opportunityRepository.countActiveGroupedBySource());
-        long pendingSuggestions = userHelpRepository.count();
+        long pendingSuggestions = userSuggestionRepository.count();
         long failedExtractions = rawOpportunityRepository.countByScreenedRelevantIsTrueAndBecameOpportunityIsFalseAndExtractionAttemptsGreaterThanEqual(3);
 
         return new DashboardMetricsResponse(
