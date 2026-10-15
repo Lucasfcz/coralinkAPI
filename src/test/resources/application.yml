@@ -1,0 +1,13 @@
+# Configurações exclusivas do ambiente de testes automatizados
+spring:
+  application:
+    name: coralink-test
+  cache:
+    # Cache em modo 'none' ou local para testes rápidos
+    type: none
+
+coralink:
+  security:
+    # Segredo hermético para testes (HMAC-SHA256 >= 256 bits)
+    secret: test-secret-key-that-is-at-least-256-bits-long-for-test-compliance-12345
+    google-client-id: test-google-client-id.apps.googleusercontent.com
