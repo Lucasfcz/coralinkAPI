@@ -17,12 +17,9 @@ spring:
         chat:
           model: gemini-3.5-flash-lite
 
-  # Cache (Redis)
+  # Cache em memória (Caffeine)
   cache:
-    type: redis
-  data:
-    redis:
-      timeout: 2000ms
+    type: caffeine
 
 coralink:
   ai:

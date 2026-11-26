@@ -17,16 +17,6 @@ spring:
       hibernate:
         format_sql: false
 
-  # Redis Prod (Upstash via URL ou Host/Porta)
-  data:
-    redis:
-      url: ${REDIS_URL:}
-      host: ${REDIS_HOST:}
-      port: ${REDIS_PORT:6379}
-      password: ${REDIS_PASSWORD:${UPSTASH_REDIS_REST_TOKEN:}}
-      ssl:
-        enabled: ${REDIS_SSL:true}
-
 coralink:
   security:
     # Segurança em Produção: Variáveis obrigatórias sem fallback fraco
