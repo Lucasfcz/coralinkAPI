@@ -8,7 +8,7 @@
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.0.x-6DB33F?style=for-the-badge&logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot)
 [![Spring Security](https://img.shields.io/badge/Spring%20Security-OAuth2%20%2B%20JWT%20RTR-6DB33F?style=for-the-badge&logo=springsecurity&logoColor=white)](https://spring.io/projects/spring-security)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
-[![Redis](https://img.shields.io/badge/Redis-Upstash%20TLS-DC382D?style=for-the-badge&logo=redis&logoColor=white)](https://upstash.com/)
+[![Caffeine](https://img.shields.io/badge/Cache-Caffeine%20In--Memory-6F4E37?style=for-the-badge)](https://github.com/ben-manes/caffeine)
 [![Google Gemini](https://img.shields.io/badge/Google%20Gemini-Spring%20AI-4285F4?style=for-the-badge&logo=google&logoColor=white)](https://ai.google.dev/)
 [![Flyway](https://img.shields.io/badge/Flyway-Database%20Migrations-CC0200?style=for-the-badge&logo=flyway&logoColor=white)](https://flywaydb.org/)
 
@@ -44,7 +44,7 @@ O sistema:
 3. **Executa um funil de enriquecimento via Inteligência Artificial** (Google Gemini Flash via Spring AI) composto por:
    - **Fase 1 (Triagem):** Classificação semântica binária de relevância prática para universitários.
    - **Fase 2 (Extração Estruturada):** Extração de prazos, modalidade, público-alvo, gratuidade e links diretos.
-4. **Armazena e indexa com alta performance** no PostgreSQL e distribui via cache **Upstash Redis (TLS)** com Jackson 3.
+4. **Armazena e indexa com alta performance** no PostgreSQL e distribui via cache em memória **Caffeine** com TTL e limite máximo por região.
 5. **Garante segurança robusta** com login local (BCrypt), Google OAuth2, rotação contínua de Refresh Token (RTR) e controle de acesso estrito (RBAC).
 
 ---
@@ -70,7 +70,7 @@ graph TD
 
     subgraph "Infraestrutura Transversal (infra)"
         InfraSec[infra.security<br/>JwtService, GoogleAuthService]
-        InfraCfg[infra.config<br/>RedisCacheConfig, OpenApiConfig]
+        InfraCfg[infra.config<br/>CacheConfig, OpenApiConfig]
         InfraExc[infra.exception<br/>GlobalExceptionHandler, ApiError]
         InfraLim[infra.ratelimit<br/>RateLimiterService]
     end
@@ -92,7 +92,7 @@ io.github.lucasfcz.coralink/
 ├── CoralinkApplication.java               # Inicializador Spring Boot
 │
 ├── infra/                                 # Componentes Transversais Compartilhados
-│   ├── config/                           # Cache Redis (Jackson 3 / Lettuce SSL) e OpenAPI Swagger 3
+│   ├── config/                           # Cache em memória (Caffeine) e OpenAPI Swagger 3
 │   ├── exception/                        # @RestControllerAdvice e ApiError padronizado
 │   ├── ratelimit/                        # Rate limiting Bucket4j por IP / Token
 │   └── security/                         # SecurityFilterChain, JwtService, GoogleAuthService, RTR
@@ -122,7 +122,7 @@ sequenceDiagram
     participant DB as PostgreSQL 16
     participant AI_Screen as Gemini (Triagem)
     participant AI_Extract as Gemini (Extração)
-    participant Cache as Redis (Upstash)
+    participant Cache as Cache (Caffeine)
 
     Scheduler->>Scraping: Iniciar Pipeline
     Scraping->>Sources: Executar collect() em todas as fontes
@@ -162,8 +162,8 @@ O Coralink adota **Defesa em Profundidade** (*Defense in Depth*):
 * **Isolamento de Papéis (RBAC):**
   - `ROLE_USER`: Acesso a feeds públicos, detalhes e submissão de sugestões.
   - `ROLE_ADMIN`: Acesso restrito a `/admin/**` (estatísticas, métricas da esteira, trigger manual, inspeção de lotes e edição/soft-delete de oportunidades).
-* **Resiliência e Tolerância a Falhas no Cache:**
-  - Implementação de `CacheErrorHandler` customizado via `CachingConfigurer`. Em cenários de indisponibilidade, timeout ou erro de desserialização no Upstash Redis, a API executa um fallback transparente para o PostgreSQL sem interromper as requisições dos usuários.
+* **Cache em Memória com Limites Seguros:**
+  - Cache local via **Caffeine** com políticas individuais de TTL (`opportunities`: 15 min, `opportunities_count`: 30 min, `opportunity_detail`: 2 horas), `maximumSize` por cache para proteger a heap da JVM e bloqueio de valores nulos.
 
 ---
 
@@ -348,7 +348,7 @@ Execute o comando Maven para garantir que seu coletor e a suíte completa passem
 
 ### Pré-requisitos
 * **Java 21** (JDK 21 instalado e configurado no `PATH`).
-* **Docker & Docker Compose** (para PostgreSQL e Redis local).
+* **Docker & Docker Compose** (para PostgreSQL local).
 * **Chave de API do Google Gemini** (obtenha gratuitamente no [Google AI Studio](https://aistudio.google.com/)).
 
 ### 7.1 Configurando Variáveis de Ambiente
@@ -368,7 +368,7 @@ DB_PASSWORD=coralink
 ```
 
 ### 7.2 Execução com Docker Compose
-Para subir o banco de dados PostgreSQL e Redis localmente:
+Para subir o banco de dados PostgreSQL localmente:
 ```bash
 docker compose up -d
 ```
@@ -384,7 +384,7 @@ A API estará pronta para receber requisições em: `http://localhost:8080`
 
 ## 8. Testes Automatizados & Qualidade
 
-A aplicação conta com uma rigorosa suíte de testes cobrindo testes unitários, validação de tokens JWT, testes de segurança MockMvc, desserialização de cache Redis e testes de coletores de fontes.
+A aplicação conta com uma rigorosa suíte de testes cobrindo testes unitários, validação de tokens JWT, testes de segurança MockMvc, configuração e políticas de cache Caffeine e testes de coletores de fontes.
 
 ### Testes de Fontes (Coletores)
 Como o ecossistema depende de portais externos de terceiros cujos layouts e marcações HTML podem sofrer alterações sem aviso prévio, os testes de fontes são tratados como **testes de integração ao vivo** (*Live Integration Tests*):

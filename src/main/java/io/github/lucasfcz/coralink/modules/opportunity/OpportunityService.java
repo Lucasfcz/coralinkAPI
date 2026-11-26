@@ -87,7 +87,7 @@ public class OpportunityService {
 
     /**
      * Atualização rápida de tipo de oportunidade pelo painel administrativo.
-     * Invalida todo o cache Redis de oportunidades imediatamente.
+     * Invalida todo o cache em memória (Caffeine) de oportunidades imediatamente.
      */
     @CacheEvict(value = {"opportunities", "opportunity_detail", "opportunities_count"}, allEntries = true)
     @Transactional
@@ -101,7 +101,7 @@ public class OpportunityService {
 
     /**
      * Atualização administrativa de oportunidade.
-     * Invalida todo o cache Redis de oportunidades para que os usuários vejam as correções imediatamente.
+     * Invalida todo o cache em memória (Caffeine) de oportunidades para que os usuários vejam as correções imediatamente.
      */
     @CacheEvict(value = {"opportunities", "opportunity_detail", "opportunities_count"}, allEntries = true)
     @Transactional
@@ -133,7 +133,7 @@ public class OpportunityService {
 
     /**
      * Exclusão administrativa de oportunidade errônea ou indesejada.
-     * Invalida todo o cache Redis atômica e imediatamente.
+     * Invalida todo o cache em memória (Caffeine) atômica e imediatamente.
      */
     @CacheEvict(value = {"opportunities", "opportunity_detail", "opportunities_count"}, allEntries = true)
     @Transactional

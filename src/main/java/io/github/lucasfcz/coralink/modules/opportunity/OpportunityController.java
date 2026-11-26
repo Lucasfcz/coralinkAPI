@@ -89,7 +89,7 @@ public class OpportunityController {
 
     @Operation(
             summary = "Quantidade Total de Oportunidades Vigentes",
-            description = "Contagem total de oportunidades ativas cuja data limite ainda não expirou. Cache de 30 minutos no Redis."
+            description = "Contagem total de oportunidades ativas cuja data limite ainda não expirou. Cache em memória (Caffeine) de 30 minutos."
     )
     @ApiResponse(responseCode = "200", description = "Quantidade calculada com sucesso")
     @GetMapping("/quantity")
@@ -99,7 +99,7 @@ public class OpportunityController {
 
     @Operation(
             summary = "Detalhes de uma Oportunidade",
-            description = "Retorna todos os dados detalhados de uma oportunidade a partir do seu ID. Consulta otimizada com cache Redis de 2 horas."
+            description = "Retorna todos os dados detalhados de uma oportunidade a partir do seu ID. Consulta otimizada com cache em memória (Caffeine) de 2 horas."
     )
     @ApiResponse(responseCode = "200", description = "Oportunidade encontrada")
     @ApiResponse(responseCode = "404", description = "Oportunidade não encontrada")
