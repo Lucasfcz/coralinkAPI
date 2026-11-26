@@ -113,7 +113,7 @@ public class AdminController {
 
     @Operation(
             summary = "Atualização Administrativa de Oportunidade",
-            description = "Permite corrigir títulos, prazos, resumos ou filtros de uma oportunidade após a extração por IA. Invalida o cache Redis automaticamente."
+            description = "Permite corrigir títulos, prazos, resumos ou filtros de uma oportunidade após a extração por IA. Invalida o cache em memória (Caffeine) automaticamente."
     )
     @ApiResponse(responseCode = "200", description = "Oportunidade atualizada com sucesso")
     @ApiResponse(responseCode = "404", description = "Oportunidade não encontrada")
@@ -128,7 +128,7 @@ public class AdminController {
 
     @Operation(
             summary = "Atualização Rápida de Tipo de Oportunidade (ADMIN)",
-            description = "Permite alterar diretamente a categoria/tipo de uma oportunidade pelo painel. Invalida o cache Redis automaticamente."
+            description = "Permite alterar diretamente a categoria/tipo de uma oportunidade pelo painel. Invalida o cache em memória (Caffeine) automaticamente."
     )
     @ApiResponse(responseCode = "200", description = "Tipo da oportunidade atualizado com sucesso")
     @ApiResponse(responseCode = "404", description = "Oportunidade não encontrada")
@@ -143,7 +143,7 @@ public class AdminController {
 
     @Operation(
             summary = "Soft Delete de Oportunidade (ADMIN)",
-            description = "Marca a oportunidade como expirada definindo sua data de validade no passado, ocultando-a do feed público sem remover o registro do banco. Invalida o cache Redis correspondente."
+            description = "Marca a oportunidade como expirada definindo sua data de validade no passado, ocultando-a do feed público sem remover o registro do banco. Invalida o cache em memória (Caffeine) correspondente."
     )
     @ApiResponse(responseCode = "204", description = "Oportunidade expirada com sucesso")
     @ApiResponse(responseCode = "404", description = "Oportunidade não encontrada")
